@@ -28,6 +28,12 @@ CLI examples:
       --transcripts data_prep/transcripts.jsonl \
       --ids 1139 1192 1177 \
       --out-dir coding_results/minimax_smoke
+
+  # Code only the conversations present in the current truth-label sample.
+  python -m scripts.code_conversations_with_minimax \
+      --transcripts data_prep/transcripts.jsonl \
+      --ids-from-truth data_prep/sample_truth_label.csv \
+      --out-dir coding_results/minimax_sample
 """
 from __future__ import annotations
 
@@ -333,6 +339,40 @@ def write_wide_csv(jsonl_path: Path, csv_path: Path) -> None:
     print(f"  -> {csv_path}  ({len(rows)} rows, sample_truth_label-style wide format)", file=sys.stderr)
 
 
+def load_truth_label_ids(path: Path) -> list[str]:
+    """Read conversation IDs from the current sample_truth_label-style CSV."""
+    ids: list[str] = []
+    with path.open(encoding="utf-8-sig", newline="") as f:
+        reader = csv.reader(f)
+        rows = list(reader)
+
+    if not rows:
+        return ids
+
+    # Current wide truth-label format: first column is Interaction, data starts
+    # after the three header rows.
+    if rows[0] and rows[0][0] == "Interaction":
+        data_rows = rows[3:]
+        for row in data_rows:
+            if row and row[0].strip():
+                ids.append(row[0].strip())
+        return ids
+
+    # Fallback for simple CSVs with an id/Interaction column.
+    header = rows[0]
+    id_col = None
+    for candidate in ("id", "Interaction", "conversation_id"):
+        if candidate in header:
+            id_col = header.index(candidate)
+            break
+    if id_col is None:
+        raise ValueError(f"could not find an id column in {path}")
+    for row in rows[1:]:
+        if len(row) > id_col and row[id_col].strip():
+            ids.append(row[id_col].strip())
+    return ids
+
+
 def run_sync(
     transcripts: list[dict],
     model: str,
@@ -397,6 +437,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--transcripts", type=Path, default=Path("data_prep/transcripts.jsonl"))
     parser.add_argument("--ids", nargs="*", help="Restrict to these conversation IDs")
+    parser.add_argument("--ids-from-truth", type=Path, help="Restrict to conversation IDs listed in a truth-label CSV")
     parser.add_argument("--limit", type=int, help="Take first N transcripts only after --ids filter")
     parser.add_argument("--mode", choices=["sync", "batch"], default="sync")
     parser.add_argument("--model", default=os.getenv("MINIMAX_MODEL") or os.getenv("OPENAI_MODEL") or DEFAULT_MODEL)
@@ -420,7 +461,17 @@ def main() -> None:
     if args.mode == "batch":
         sys.exit("MiniMax batch mode is not implemented in this OpenAI-compatible script. Use --mode sync.")
 
-    transcripts = load_transcripts(args.transcripts, ids=args.ids, limit=args.limit)
+    ids = args.ids
+    if args.ids_from_truth:
+        truth_ids = load_truth_label_ids(args.ids_from_truth)
+        if args.ids:
+            explicit_ids = set(str(i) for i in args.ids)
+            ids = [cid for cid in truth_ids if cid in explicit_ids]
+        else:
+            ids = truth_ids
+        print(f"Loaded {len(truth_ids)} IDs from {args.ids_from_truth}", file=sys.stderr)
+
+    transcripts = load_transcripts(args.transcripts, ids=ids, limit=args.limit)
     if not transcripts:
         sys.exit("no transcripts loaded - check --transcripts / --ids")
     print(f"Loaded {len(transcripts)} transcripts", file=sys.stderr)
