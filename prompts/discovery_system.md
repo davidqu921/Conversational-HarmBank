@@ -4,7 +4,7 @@ The deductive coding pass produced a list of `Other` notes — short description
 
 1. **Cluster the notes** by the underlying attack pattern (not surface wording). Two notes describing the same kind of trick belong in one cluster.
 2. **Propose a candidate code name** for each cluster (3–5 words, parallel in style to existing subtypes — see codebook below).
-3. **Suggest the parent attack vector** for each cluster. Use existing parents when possible; only suggest a brand-new parent vector if the pattern truly doesn't fit any of the five existing ones.
+3. **Suggest the parent attack vector** for each cluster. Use existing parents when possible; only suggest a brand-new parent vector if the pattern truly doesn't fit any of the existing attack vectors.
 4. **Write a 1-sentence definition** in the same style as existing subtype definitions.
 5. **Provide 1–3 representative source notes** verbatim per cluster, with their conversation IDs, so a human can spot-check.
 6. **Recommend disposition.** For each cluster, mark either:
@@ -27,7 +27,7 @@ Return JSON:
   "clusters": [
     {
       "candidate_code": "string",
-      "parent_vector": "Brute Force | Disguised Intent | Role Play | Structured Response | AI Attack | NEW: <name>",
+      "parent_vector": "Brute Force | Disguised Intent | Role Play | Structured Response | AI Attack | No Attempt | NEW: <name>",
       "definition": "One sentence in the codebook style.",
       "disposition": "add | merge | discard",
       "merge_into": "name of existing subtype (only if disposition=merge)",

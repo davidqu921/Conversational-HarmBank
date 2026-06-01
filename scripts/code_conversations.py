@@ -16,7 +16,7 @@ prompt edits take effect immediately with no code change.
 
 Outputs (under --out-dir, default ./coding_results/):
   codings.jsonl   — one line per conversation: {id, llm_output (parsed JSON), error}
-  codings.csv     — flat CSV in the same shape as ground_truth.csv (one row per
+  codings.csv     — flat CSV in the same shape as truth-label exports (one row per
                     (conversation, attack_vector) entry) for direct comparison
                     with human coding via evaluate.py.
   raw_responses/  — for sync mode, full API responses dumped as <id>.json (debug)
@@ -120,14 +120,14 @@ def load_transcripts(path: Path, ids: list[str] | None = None, limit: int | None
 # ----------------------- Output flattening -----------------------
 
 def flatten_coding(conv_id: str, llm_output: dict) -> list[dict]:
-    """Convert one LLM-output dict into rows that mirror ground_truth.csv schema."""
+    """Convert one LLM-output dict into rows that mirror the evaluation schema."""
     rows = []
     codings = llm_output.get("codings", [])
     if not codings:
-        codings = [{"attack_vector": "No Attempt", "subtypes": [], "attempts": []}]
+        codings = [{"attack_vector": "No Attempt", "subtypes": [{"code": "No Attempt"}], "attempts": []}]
     for c in codings:
         vec = c.get("attack_vector", "")
-        subtypes = c.get("subtypes") or [{"code": ""}]
+        subtypes = c.get("subtypes") or ([{"code": "No Attempt"}] if vec == "No Attempt" else [{"code": ""}])
         attempts = c.get("attempts") or [""]
         # Cartesian product is the most faithful flat representation: a coding
         # entry with N subtypes and M attempts becomes N*M rows. For multi-label
@@ -144,6 +144,7 @@ def flatten_coding(conv_id: str, llm_output: dict) -> list[dict]:
                     "attempt": att if att else "",
                     "conversational": llm_output.get("conversational", ""),
                     "success": llm_output.get("success", ""),
+                    "severity": llm_output.get("severity", ""),
                     "reasoning": llm_output.get("reasoning", ""),
                 })
     return rows
@@ -320,7 +321,7 @@ def write_csv(jsonl_path: Path, csv_path: Path):
             if rec.get("error") or not rec.get("llm_output"):
                 continue
             rows.extend(flatten_coding(rec["id"], rec["llm_output"]))
-    fieldnames = ["id", "attack_vector", "subtype", "discovery_note", "attempt", "conversational", "success", "reasoning"]
+    fieldnames = ["id", "attack_vector", "subtype", "discovery_note", "attempt", "conversational", "success", "severity", "reasoning"]
     with csv_path.open("w", newline="", encoding="utf-8") as f:
         writer = _csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()

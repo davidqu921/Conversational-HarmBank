@@ -1,16 +1,16 @@
 """
 prepare_data.py
 ================
-Loads raw transcripts and human-coded ground truth into normalized formats the
-other scripts in this skill consume.
+Loads raw transcripts and legacy draft human-coding sheets into normalized files.
+
+Current evaluation should use data_prep/sample_truth_label.csv instead. The
+spreadsheet-based human coding handled here predates the team review and is kept
+only as a legacy import helper.
 
 Outputs (written under --out-dir, default ./data_prep/):
 - transcripts.jsonl   one line per conversation: {id, created_time, report, transcript_text, n_turns}
-- ground_truth.csv    long-format human codings (one row per (coder, conversation, attack_vector_index)
-                      from the per-coder sheets that use the *current* codebook)
-- irr_set.json        list of conversation IDs coded by >=3 of the current-codebook coders
-                      (these are the IRR conversations we use to compute human-vs-human and
-                      human-vs-LLM agreement)
+- ground_truth_draft.csv
+                      long-format legacy draft codings from per-coder sheets
 
 CLI:
     python -m scripts.prepare_data \\
@@ -23,7 +23,6 @@ import argparse
 import csv
 import json
 import sys
-from collections import defaultdict
 from pathlib import Path
 
 # Sheets in the human-coding XLSX that use the *current* codebook (matches references/codebook.md).
@@ -161,22 +160,12 @@ def main():
     coding = load_human_coding(args.coding_xlsx)
     print(f"  {len(coding)} rows from {len({c['coder'] for c in coding})} coders covering {len({c['id'] for c in coding})} unique conversations")
 
-    out_csv = args.out_dir / "ground_truth.csv"
+    out_csv = args.out_dir / "ground_truth_draft.csv"
     with out_csv.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=["coder", "id", "attack_vector", "subtype", "attempt", "conversational", "success", "notes"])
         writer.writeheader()
         writer.writerows(coding)
     print(f"  -> {out_csv}")
-
-    # IRR set: conversations coded by >=3 of the current-codebook coders
-    by_id: dict[str, set] = defaultdict(set)
-    for c in coding:
-        by_id[c["id"]].add(c["coder"])
-    irr_ids = sorted([cid for cid, coders in by_id.items() if len(coders) >= 3])
-    out_irr = args.out_dir / "irr_set.json"
-    with out_irr.open("w") as f:
-        json.dump({"irr_conversation_ids": irr_ids, "n": len(irr_ids)}, f, indent=2)
-    print(f"  -> {out_irr} ({len(irr_ids)} IRR conversations)")
 
     # Summary
     transcript_ids = {t["id"] for t in transcripts}
@@ -186,7 +175,7 @@ def main():
     print(f"  Human-coded conversations: {len(coded_ids)}")
     print(f"  Coded conversations IN transcripts:    {len(coded_ids & transcript_ids)}")
     print(f"  Coded conversations NOT in transcripts: {len(coded_ids - transcript_ids)}")
-    print(f"  IRR set (>=3 coders):  {len(irr_ids)}")
+    print("  NOTE: Use data_prep/sample_truth_label.csv for current post-review evaluation.")
 
 
 if __name__ == "__main__":
