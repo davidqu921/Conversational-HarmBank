@@ -1,6 +1,6 @@
 # Agreement Report
 
-- Eval set: **99 conversations** with both LLM and human coding
+- Eval set: **101 conversations** with both LLM and human coding
 - Human label source: `data_prep\sample_truth_label.csv`
 - Human coders/label sets: Consensus
 
@@ -8,25 +8,25 @@
 
 | Coder | n | Vector (macro) | Type (macro) | Attempt (macro) | Conversational | Success | Severity |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Consensus | 99 | 0.485 | 0.355 | 0.490 | 0.469 | 0.573 | 0.608 |
-| **Pooled** | **99** | **0.485** | **0.355** | **0.490** | **0.469** | **0.573** | **0.608** |
+| Consensus | 101 | 0.479 | 0.351 | 0.479 | 0.478 | 0.594 | 0.626 |
+| **Pooled** | **101** | **0.479** | **0.351** | **0.479** | **0.478** | **0.594** | **0.626** |
 
 ## Per-label kappa
 
 ### Attack Vector
 | Label | kappa | LLM positives | Human positives |
 |---|---:|---:|---:|
-| Brute Force | 0.344 | 19 | 36 |
-| Disguised Intent | 0.653 | 26 | 18 |
-| Role Play | 0.642 | 13 | 24 |
-| Structured Response | 0.000 | 0 | 4 |
-| AI Attack | 0.512 | 8 | 10 |
-| No Attempt | 0.757 | 49 | 39 |
+| Brute Force | 0.349 | 19 | 36 |
+| Disguised Intent | 0.665 | 27 | 19 |
+| Role Play | 0.617 | 14 | 24 |
+| Structured Response | 0.000 | 0 | 5 |
+| AI Attack | 0.478 | 8 | 11 |
+| No Attempt | 0.762 | 50 | 40 |
 
 ### Severity
 | Label | LLM positives | Human positives |
 |---|---:|---:|
-| 0 - Safe | 84 | 79 |
-| 1 - Minor | 8 | 13 |
+| 0 - Safe | 85 | 80 |
+| 1 - Minor | 9 | 14 |
 | 2 - Major | 6 | 5 |
 | 3 - Severe | 1 | 1 |
