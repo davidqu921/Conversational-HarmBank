@@ -261,6 +261,55 @@ def confusion_matrix(rows_a: list[str], rows_b: list[str], labels: list[str]) ->
     return matrix
 
 
+def multilabel_horizontal_metrics(human_sets: list[set], llm_sets: list[set]) -> dict[str, float]:
+    """Conversation-level set agreement for one multi-label dimension."""
+    n = len(human_sets)
+    if n == 0:
+        return {
+            "hit_rate": float("nan"),
+            "exact": float("nan"),
+            "jaccard": float("nan"),
+            "precision": float("nan"),
+            "recall": float("nan"),
+            "f1": float("nan"),
+        }
+
+    hits = []
+    exact = []
+    jaccards = []
+    precisions = []
+    recalls = []
+    f1s = []
+
+    for human, llm in zip(human_sets, llm_sets):
+        intersection = human & llm
+        union = human | llm
+        hits.append(1.0 if (not human and not llm) or bool(intersection) else 0.0)
+        exact.append(1.0 if human == llm else 0.0)
+        jaccards.append(1.0 if not union else len(intersection) / len(union))
+        precision = 1.0 if not llm else len(intersection) / len(llm)
+        recall = 1.0 if not human else len(intersection) / len(human)
+        f1 = 0.0 if precision + recall == 0 else 2 * precision * recall / (precision + recall)
+        precisions.append(precision)
+        recalls.append(recall)
+        f1s.append(f1)
+
+    return {
+        "hit_rate": sum(hits) / n,
+        "exact": sum(exact) / n,
+        "jaccard": sum(jaccards) / n,
+        "precision": sum(precisions) / n,
+        "recall": sum(recalls) / n,
+        "f1": sum(f1s) / n,
+    }
+
+
+def single_label_hit_rate(human_values: list[str], llm_values: list[str]) -> float:
+    if not human_values:
+        return float("nan")
+    return sum(1 for human, llm in zip(human_values, llm_values) if human == llm) / len(human_values)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--llm-codings", required=True, type=Path)
@@ -328,6 +377,35 @@ def main():
     report_lines.extend(["", "### Severity", "| Label | LLM positives | Human positives |", "|---|---:|---:|"])
     for label in SEVERITY_LABELS:
         report_lines.append(f"| {label} | {sum(1 for r in l_all if r['severity'] == label)} | {sum(1 for r in h_all if r['severity'] == label)} |")
+
+    report_lines.extend([
+        "",
+        "## Horizontal conversation-level agreement",
+        "",
+        "These metrics compare each conversation's whole label set within one dimension. They are complementary to the label-wise Cohen's kappa above.",
+        "",
+        "### Multi-label dimensions",
+        "",
+        "| Dimension | Hit Rate | Exact Match | Mean Jaccard | Mean Precision | Mean Recall | Mean F1 |",
+        "|---|---:|---:|---:|---:|---:|---:|",
+    ])
+    for name, field in [("Vector", "vectors"), ("Type", "subtypes"), ("Attempt", "attempts")]:
+        metrics = multilabel_horizontal_metrics([r[field] for r in h_all], [r[field] for r in l_all])
+        report_lines.append(
+            f"| {name} | {metrics['hit_rate']:.3f} | {metrics['exact']:.3f} | {metrics['jaccard']:.3f} | "
+            f"{metrics['precision']:.3f} | {metrics['recall']:.3f} | {metrics['f1']:.3f} |"
+        )
+
+    report_lines.extend([
+        "",
+        "### Single-label dimensions",
+        "",
+        "| Dimension | Hit Rate |",
+        "|---|---:|",
+    ])
+    for name, field in [("Conversational", "conv"), ("Success", "success"), ("Severity", "severity")]:
+        hit_rate = single_label_hit_rate([r[field] or "<blank>" for r in h_all], [r[field] or "<blank>" for r in l_all])
+        report_lines.append(f"| {name} | {hit_rate:.3f} |")
 
     (args.out_dir / "agreement_report.md").write_text("\n".join(report_lines), encoding="utf-8")
     print(f"  -> {args.out_dir / 'agreement_report.md'}", file=sys.stderr)
