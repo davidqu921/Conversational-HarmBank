@@ -79,7 +79,10 @@ def render_few_shots(examples: list[dict]) -> str:
     return "\n".join(parts)
 
 
-def build_system_prompt() -> str:
+def build_system_prompt() -> str: # System Prompts need three components: 
+                                #the system instructions, the codebook reference, 
+                                #and the few-shot examples. We load these from separate 
+                                #files for modularity and ease of editing.
     template = load_text(PROMPTS_DIR / "coding_system.md")
     codebook = load_text(REFS_DIR / "codebook.md")
     examples = load_json(PROMPTS_DIR / "few_shot_examples.json")
@@ -87,7 +90,12 @@ def build_system_prompt() -> str:
     return template.replace("{{CODEBOOK}}", codebook).replace("{{FEW_SHOT_EXAMPLES}}", rendered_examples)
 
 
-def build_user_prompt(conv: dict) -> str:
+def build_user_prompt(conv: dict) -> str:  # The user prompt consists of a template with slots
+                                           # for the conversation ID, an optional reporter note 
+                                           # (the student's own description of the issue, which may be blank), 
+                                           # and the transcript text. 
+                                           # We load the template from prompts/coding_user_template.md 
+                                           # and fill in the slots with data from the conversation record.
     template = load_text(PROMPTS_DIR / "coding_user_template.md")
     report = conv.get("report", "").strip()
     optional_report = f"Reporter note (the student's own description, may be blank): {report}\n" if report else ""

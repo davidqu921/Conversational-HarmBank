@@ -10,9 +10,7 @@ The optional discovery pass clusters those `Other` notes and proposes candidate 
 
 ## Current Truth Labels
 
-The current evaluation source is `data_prep/sample_truth_label.csv`, a post-review consensus label sheet in wide format. The older `data_prep/ground_truth.csv` came from an earlier draft round and should not be used for current model evaluation.
-
-The old IRR/reserved-ID workflow has been removed from the active pipeline. Few-shot examples are selected from the current sample truth labels and should be regenerated or reviewed whenever the codebook changes.
+The current evaluation source is `data_prep/sample_truth_label.csv`, a post-review consensus label sheet in wide format. 
 
 ## Few-Shot Examples
 

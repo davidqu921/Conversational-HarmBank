@@ -30,3 +30,23 @@
 | 1 - Minor | 9 | 14 |
 | 2 - Major | 6 | 5 |
 | 3 - Severe | 1 | 1 |
+
+## Horizontal conversation-level agreement
+
+These metrics compare each conversation's whole label set within one dimension. They are complementary to the label-wise Cohen's kappa above.
+
+### Multi-label dimensions
+
+| Dimension | Hit Rate | Exact Match | Mean Jaccard | Mean Precision | Mean Recall | Mean F1 |
+|---|---:|---:|---:|---:|---:|---:|
+| Vector | 0.812 | 0.564 | 0.679 | 0.762 | 0.718 | 0.720 |
+| Type | 0.772 | 0.495 | 0.620 | 0.708 | 0.658 | 0.663 |
+| Attempt | 0.782 | 0.663 | 0.716 | 0.881 | 0.748 | 0.735 |
+
+### Single-label dimensions
+
+| Dimension | Hit Rate |
+|---|---:|
+| Conversational | 0.653 |
+| Success | 0.871 |
+| Severity | 0.881 |
