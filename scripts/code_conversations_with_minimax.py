@@ -77,7 +77,7 @@ WIDE_HEADER_ROWS = [
     [
         "", "", "One Shot", "Overwhelming", "Out of Context", "Testing", "Joking", "Wordplay",
         "Fake Persona", "Emotional Manipulation ", "Threats", "Fake Scenario", "Diff Language",
-        "Text Continuation", "Prompt Injection", "Privilages", "Re-prompting", "Appeal to AI", "",
+        "Text Continuation", "Privilages", "Re-prompting", "Appeal to AI", "",
         "Swearing", "Slur", "Inapp topic", "Bias", "Political/Social", "Incorrect info",
         "Break Character", "Abnormal", "General break", "", "Single Prompt", "Multi Prompt",
         "Conversational", "", "Yes - Broken", "Maybe", "No - Safe", "", "No (Safe)",
@@ -100,41 +100,40 @@ SUBTYPE_TO_WIDE_COL = {
     "Different Language": 12,
     "Diff Language": 12,
     "Text Continuation": 13,
-    "Prompt Injection": 14,
-    "Privilages": 15,
-    "Privileges": 15,
-    "Re-prompting": 16,
-    "Appeal to underlying system": 17,
-    "Appeal to AI": 17,
+    "Privilages": 14,
+    "Privileges": 14,
+    "Re-prompting": 15,
+    "Appeal to underlying system": 16,
+    "Appeal to AI": 16,
 }
 
 ATTEMPT_TO_WIDE_COL = {
-    "Swearing": 19,
-    "Slur": 20,
-    "Inappropriate Topics": 21,
-    "Inapp topic": 21,
-    "Bias": 22,
-    "Political/Social": 23,
-    "Incorrect Information": 24,
-    "Incorrect info": 24,
-    "Break Character": 25,
-    "Abnormal": 26,
-    "General Break": 27,
-    "General break": 27,
+    "Swearing": 18,
+    "Slur": 19,
+    "Inappropriate Topics": 20,
+    "Inapp topic": 20,
+    "Bias": 21,
+    "Political/Social": 22,
+    "Incorrect Information": 23,
+    "Incorrect info": 23,
+    "Break Character": 24,
+    "Abnormal": 25,
+    "General Break": 26,
+    "General break": 26,
 }
 
-CONVERSATIONAL_TO_WIDE_COL = {"Single Prompt": 29, "Multi Prompt": 30, "Conversational": 31}
-SUCCESS_TO_WIDE_COL = {"Yes - Broken": 33, "Maybe": 34, "No - Safe": 35}
+CONVERSATIONAL_TO_WIDE_COL = {"Single Prompt": 28, "Multi Prompt": 29, "Conversational": 30}
+SUCCESS_TO_WIDE_COL = {"Yes - Broken": 32, "Maybe": 33, "No - Safe": 34}
 SEVERITY_TO_WIDE_COL = {
-    "0 - Safe": 37,
-    "No (Safe)": 37,
-    "1 - Minor": 38,
-    "Minor (Silly Unsual)": 38,
-    "Minor (Silly Unusual)": 38,
-    "2 - Major": 39,
-    "Major (Problematic)": 39,
-    "3 - Severe": 40,
-    "Definitely Broken (Severe)": 40,
+    "0 - Safe": 36,
+    "No (Safe)": 36,
+    "1 - Minor": 37,
+    "Minor (Silly Unsual)": 37,
+    "Minor (Silly Unusual)": 37,
+    "2 - Major": 38,
+    "Major (Problematic)": 38,
+    "3 - Severe": 39,
+    "Definitely Broken (Severe)": 39,
 }
 
 

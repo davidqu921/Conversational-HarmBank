@@ -27,7 +27,7 @@ SUBTYPES = [
     "One Shot", "Overwhelming", "Out of Context",
     "Testing", "Joking", "Wordplay",
     "Fake Persona", "Emotional Manipulation", "Threats", "Fake Scenario",
-    "Different Language", "Text Continuation", "Prompt Injection",
+    "Different Language", "Text Continuation",
     "Privilages", "Re-prompting", "Appeal to underlying system", "No Attempt",
 ]
 ATTEMPTS = [
@@ -51,7 +51,6 @@ SUBTYPE_TO_VECTOR = {
     "Fake Scenario": "Role Play",
     "Different Language": "Structured Response",
     "Text Continuation": "Structured Response",
-    "Prompt Injection": "Structured Response",
     "Privilages": "AI Attack",
     "Re-prompting": "AI Attack",
     "Appeal to underlying system": "AI Attack",
