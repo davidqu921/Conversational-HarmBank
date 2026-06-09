@@ -11,6 +11,9 @@ Outputs:
   1. agreement_report.md
   2. confusion_matrices.xlsx
   3. discrepancies.xlsx
+
+The same metrics can also be used for human-human IRR by passing
+`--human-coding-a` and `--human-coding-b`.
 """
 from __future__ import annotations
 
@@ -134,17 +137,17 @@ def load_llm(jsonl_path: Path) -> dict[str, dict]:
     return out
 
 
-def load_human(csv_path: Path) -> dict[tuple[str, str], dict]:
+def load_human(csv_path: Path, coder_name: str | None = None) -> dict[tuple[str, str], dict]:
     with csv_path.open(encoding="utf-8-sig", newline="") as f:
         sample = list(csv.reader(f))
     if not sample:
         return {}
     if sample[0] and sample[0][0] == "Interaction":
-        return load_wide_truth(sample)
-    return load_long_truth(csv_path)
+        return load_wide_truth(sample, coder_name or "Consensus")
+    return load_long_truth(csv_path, coder_name)
 
 
-def load_wide_truth(rows: list[list[str]]) -> dict[tuple[str, str], dict]:
+def load_wide_truth(rows: list[list[str]], coder_name: str = "Consensus") -> dict[tuple[str, str], dict]:
     labels = rows[2]
     out: dict[tuple[str, str], dict] = {}
 
@@ -177,16 +180,16 @@ def load_wide_truth(rows: list[list[str]]) -> dict[tuple[str, str], dict]:
                 entry["severity"] = label
         if entry["success"] == "No - Safe" and not entry["severity"]:
             entry["severity"] = "0 - Safe"
-        out[("Consensus", cid)] = entry
+        out[(coder_name, cid)] = entry
     return out
 
 
-def load_long_truth(csv_path: Path) -> dict[tuple[str, str], dict]:
+def load_long_truth(csv_path: Path, coder_name: str | None = None) -> dict[tuple[str, str], dict]:
     out: dict[tuple[str, str], dict] = {}
     with csv_path.open(encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            coder = row.get("coder", "Consensus") or "Consensus"
+            coder = coder_name or row.get("coder", "Consensus") or "Consensus"
             cid = row.get("id") or row.get("Interaction")
             if not cid:
                 continue
@@ -309,13 +312,176 @@ def single_label_hit_rate(human_values: list[str], llm_values: list[str]) -> flo
     return sum(1 for human, llm in zip(human_values, llm_values) if human == llm) / len(human_values)
 
 
+def default_coder_name(path: Path) -> str:
+    stem = path.stem
+    for prefix in ["Coding - Jailbreak (H-H)", "Coding - Jailbreak"]:
+        stem = stem.replace(prefix, "")
+    return stem.strip(" -_") or path.stem
+
+
+def run_human_human(args) -> None:
+    coder_a = args.coder_a_name or default_coder_name(args.human_coding_a)
+    coder_b = args.coder_b_name or default_coder_name(args.human_coding_b)
+    labels_a = load_human(args.human_coding_a, coder_a)
+    labels_b = load_human(args.human_coding_b, coder_b)
+    transcripts = load_transcripts(args.transcripts) if args.transcripts else {}
+
+    ids_a = {cid for coder, cid in labels_a if coder == coder_a}
+    ids_b = {cid for coder, cid in labels_b if coder == coder_b}
+    eval_ids = sorted(ids_a & ids_b)
+    if not eval_ids:
+        sys.exit("no overlap between the two human coding files - cannot evaluate IRR")
+
+    a_all = [labels_a[(coder_a, cid)] for cid in eval_ids]
+    b_all = [labels_b[(coder_b, cid)] for cid in eval_ids]
+
+    kv = macro_kappa(binary_kappa_per_label(ATTACK_VECTORS, [r["vectors"] for r in a_all], [r["vectors"] for r in b_all]))
+    kt = macro_kappa(binary_kappa_per_label(SUBTYPES, [r["subtypes"] for r in a_all], [r["subtypes"] for r in b_all]))
+    ka = macro_kappa(binary_kappa_per_label(ATTEMPTS, [r["attempts"] for r in a_all], [r["attempts"] for r in b_all]))
+    kc = cohen_kappa([r["conv"] or "<blank>" for r in a_all], [r["conv"] or "<blank>" for r in b_all])
+    ks = cohen_kappa([r["success"] or "<blank>" for r in a_all], [r["success"] or "<blank>" for r in b_all])
+    kz = cohen_kappa([r["severity"] or "<blank>" for r in a_all], [r["severity"] or "<blank>" for r in b_all])
+
+    report_lines = [
+        "# Human-Human IRR Report",
+        "",
+        f"- Eval set: **{len(eval_ids)} conversations** coded by both human coders",
+        f"- Coder A: **{coder_a}** from `{args.human_coding_a}`",
+        f"- Coder B: **{coder_b}** from `{args.human_coding_b}`",
+        "",
+        "## Cohen's kappa per dimension",
+        "",
+        "| Comparison | n | Vector (macro) | Type (macro) | Attempt (macro) | Conversational | Success | Severity |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
+        f"| {coder_a} vs {coder_b} | {len(eval_ids)} | {kv:.3f} | {kt:.3f} | {ka:.3f} | {kc:.3f} | {ks:.3f} | {kz:.3f} |",
+        "",
+        "## Per-label kappa",
+        "",
+        "### Attack Vector",
+        f"| Label | kappa | {coder_a} positives | {coder_b} positives |",
+        "|---|---:|---:|---:|",
+    ]
+    for label, k in binary_kappa_per_label(ATTACK_VECTORS, [r["vectors"] for r in a_all], [r["vectors"] for r in b_all]).items():
+        report_lines.append(f"| {label} | {k:.3f} | {sum(1 for r in a_all if label in r['vectors'])} | {sum(1 for r in b_all if label in r['vectors'])} |")
+
+    report_lines.extend(["", "### Severity", f"| Label | {coder_a} positives | {coder_b} positives |", "|---|---:|---:|"])
+    for label in SEVERITY_LABELS:
+        report_lines.append(f"| {label} | {sum(1 for r in a_all if r['severity'] == label)} | {sum(1 for r in b_all if r['severity'] == label)} |")
+
+    report_lines.extend([
+        "",
+        "## Horizontal conversation-level agreement",
+        "",
+        "These metrics compare each conversation's whole label set within one dimension. This is the closest human-human counterpart to the LLM-vs-human success-rate style metrics.",
+        "",
+        "### Multi-label dimensions",
+        "",
+        "| Dimension | Hit Rate | Exact Match | Mean Jaccard | Mean Precision | Mean Recall | Mean F1 |",
+        "|---|---:|---:|---:|---:|---:|---:|",
+    ])
+    for name, field in [("Vector", "vectors"), ("Type", "subtypes"), ("Attempt", "attempts")]:
+        metrics = multilabel_horizontal_metrics([r[field] for r in a_all], [r[field] for r in b_all])
+        report_lines.append(
+            f"| {name} | {metrics['hit_rate']:.3f} | {metrics['exact']:.3f} | {metrics['jaccard']:.3f} | "
+            f"{metrics['precision']:.3f} | {metrics['recall']:.3f} | {metrics['f1']:.3f} |"
+        )
+
+    report_lines.extend(["", "### Single-label dimensions", "", "| Dimension | Hit Rate |", "|---|---:|"])
+    for name, field in [("Conversational", "conv"), ("Success", "success"), ("Severity", "severity")]:
+        hit_rate = single_label_hit_rate([r[field] or "<blank>" for r in a_all], [r[field] or "<blank>" for r in b_all])
+        report_lines.append(f"| {name} | {hit_rate:.3f} |")
+
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    (args.out_dir / "human_human_irr_report.md").write_text("\n".join(report_lines), encoding="utf-8")
+    print(f"  -> {args.out_dir / 'human_human_irr_report.md'}", file=sys.stderr)
+
+    try:
+        import openpyxl
+
+        wb = openpyxl.Workbook()
+        wb.remove(wb.active)
+
+        def write_matrix(sheet_name: str, labels: list[str], rows_a: list[str], rows_b: list[str]):
+            ws = wb.create_sheet(sheet_name)
+            ws.cell(1, 1, f"{sheet_name}: rows={coder_a}, cols={coder_b}")
+            for j, label in enumerate(labels, 2):
+                ws.cell(2, j, label)
+            for i, label in enumerate(labels, 3):
+                ws.cell(i, 1, label)
+            for i, row in enumerate(confusion_matrix(rows_a, rows_b, labels), 3):
+                for j, value in enumerate(row, 2):
+                    ws.cell(i, j, value)
+
+        write_matrix("vector", ATTACK_VECTORS, [first_label(r["vectors"], ATTACK_VECTORS) for r in a_all], [first_label(r["vectors"], ATTACK_VECTORS) for r in b_all])
+        write_matrix("type", SUBTYPES, [first_label(r["subtypes"], SUBTYPES) for r in a_all], [first_label(r["subtypes"], SUBTYPES) for r in b_all])
+        write_matrix("attempt", ATTEMPTS, [first_label(r["attempts"], ATTEMPTS) for r in a_all], [first_label(r["attempts"], ATTEMPTS) for r in b_all])
+        write_matrix("conversational", CONV_LABELS, [r["conv"] for r in a_all], [r["conv"] for r in b_all])
+        write_matrix("success", SUCCESS_LABELS, [r["success"] for r in a_all], [r["success"] for r in b_all])
+        write_matrix("severity", SEVERITY_LABELS, [r["severity"] for r in a_all], [r["severity"] for r in b_all])
+        wb.save(args.out_dir / "human_human_confusion_matrices.xlsx")
+        print(f"  -> {args.out_dir / 'human_human_confusion_matrices.xlsx'}", file=sys.stderr)
+    except ImportError:
+        print("  (skipping human-human confusion matrices - install openpyxl)", file=sys.stderr)
+
+    try:
+        import openpyxl
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Human-Human Discrepancies"
+        headers = [
+            "conversation_id", "coder_a", "coder_b", "coder_a_vectors", "coder_b_vectors",
+            "coder_a_types", "coder_b_types", "coder_a_attempts", "coder_b_attempts",
+            "coder_a_conv", "coder_b_conv", "coder_a_success", "coder_b_success",
+            "coder_a_severity", "coder_b_severity", "agree_vector", "agree_type",
+            "agree_success", "agree_severity", "transcript",
+        ]
+        for col, header in enumerate(headers, 1):
+            ws.cell(1, col, header)
+        row_num = 2
+        for cid, a, b in zip(eval_ids, a_all, b_all):
+            agree_vector = bool(a["vectors"] & b["vectors"]) or (not a["vectors"] and not b["vectors"])
+            agree_type = bool(a["subtypes"] & b["subtypes"]) or (not a["subtypes"] and not b["subtypes"])
+            agree_success = a["success"] == b["success"]
+            agree_severity = a["severity"] == b["severity"]
+            if agree_vector and agree_type and agree_success and agree_severity:
+                continue
+            values = [
+                cid, coder_a, coder_b,
+                "; ".join(sorted(a["vectors"])), "; ".join(sorted(b["vectors"])),
+                "; ".join(sorted(a["subtypes"])), "; ".join(sorted(b["subtypes"])),
+                "; ".join(sorted(a["attempts"])), "; ".join(sorted(b["attempts"])),
+                a["conv"], b["conv"], a["success"], b["success"], a["severity"], b["severity"],
+                agree_vector, agree_type, agree_success, agree_severity, transcripts.get(cid, "")[:3000],
+            ]
+            for col, value in enumerate(values, 1):
+                ws.cell(row_num, col, value)
+            row_num += 1
+        wb.save(args.out_dir / "human_human_discrepancies.xlsx")
+        print(f"  -> {args.out_dir / 'human_human_discrepancies.xlsx'}  ({row_num - 2} disagreements)", file=sys.stderr)
+    except ImportError:
+        print("  (skipping human-human discrepancies xlsx - install openpyxl)", file=sys.stderr)
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--llm-codings", required=True, type=Path)
-    parser.add_argument("--human-coding", required=True, type=Path)
-    parser.add_argument("--transcripts", required=True, type=Path)
+    parser.add_argument("--llm-codings", type=Path)
+    parser.add_argument("--human-coding", type=Path)
+    parser.add_argument("--human-coding-a", type=Path, help="First human coding CSV for human-human IRR")
+    parser.add_argument("--human-coding-b", type=Path, help="Second human coding CSV for human-human IRR")
+    parser.add_argument("--coder-a-name", help="Display name for --human-coding-a")
+    parser.add_argument("--coder-b-name", help="Display name for --human-coding-b")
+    parser.add_argument("--transcripts", type=Path)
     parser.add_argument("--out-dir", required=True, type=Path)
     args = parser.parse_args()
+
+    if args.human_coding_a or args.human_coding_b:
+        if not args.human_coding_a or not args.human_coding_b:
+            parser.error("--human-coding-a and --human-coding-b must be provided together")
+        run_human_human(args)
+        return
+    if not args.llm_codings or not args.human_coding or not args.transcripts:
+        parser.error("LLM evaluation requires --llm-codings, --human-coding, and --transcripts")
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     llm = load_llm(args.llm_codings)
