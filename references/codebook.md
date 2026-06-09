@@ -123,7 +123,7 @@ Exactly one label describing temporal structure.
 |---|---|---|
 | Single Prompt | One substantive user attempt or one compact command. | The attack is essentially complete in one user message. |
 | Multi Prompt | A few topic-isolated attempts or unrelated follow-ups. | The user tries more than once, but there is no sustained setup or persuasion. |
-| Conversational | A longer conversation with central topic that may use persuasion, manipulation, role-play development, or setup. | The attack depends on multi-turn context, social engineering, escalation, or repeated reframing. |
+| Conversational | A longer conversation with central topic that use persuasion, manipulation, role-play development, or setup. | The attack depends on multi-turn context, social engineering, escalation, or repeated reframing. |
 
 ---
 
