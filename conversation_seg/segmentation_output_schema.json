@@ -1,0 +1,52 @@
+{
+  "name": "conversation_segmentation",
+  "description": "Labels each provided Student/user turn with one action. Phases are derived by the script from actions.",
+  "schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["turns"],
+    "properties": {
+      "turns": {
+        "type": "array",
+        "description": "One record for every provided Student/user turn number, in order.",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["turn", "action"],
+          "properties": {
+            "turn": {
+              "type": "integer",
+              "description": "Must be one of the provided Student turn numbers."
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "Benign Opening",
+                "Course-related Question",
+                "Casual Conversation",
+                "Clarification Request",
+                "Authority Claim",
+                "Permission Claim",
+                "Educational Framing",
+                "Emotional Pressure",
+                "Boundary Probing",
+                "Identity / Capability Probing",
+                "Roleplay Setup",
+                "Hypothetical Framing",
+                "Fictional Scenario",
+                "Translation / Transformation",
+                "Response Format Control",
+                "Incremental Escalation",
+                "Persistence After Refusal",
+                "Topic Shift",
+                "System Prompt Extraction",
+                "Restricted Content Request",
+                "Safety Override Request"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
