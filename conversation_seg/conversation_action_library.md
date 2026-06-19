@@ -8,8 +8,7 @@ The unit of annotation is an **Action Segment**.
 
 Each segment should be assigned:
 
-* One Primary Action
-* Optional Secondary Action
+* One Action
 * One Phase
 
 Actions describe **what the user is doing**.

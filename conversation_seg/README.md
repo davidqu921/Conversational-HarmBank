@@ -17,7 +17,7 @@ Run from the repository root.
 Clean the original transcripts by dropping conversations with `n_turns <= 1`:
 
 ```bash
-python -m scripts.clean_transcript
+python -m scripts.data_prep.clean_transcript
 ```
 
 This writes:
@@ -29,7 +29,7 @@ data_prep/clean_transcript.jsonl
 Create deterministic turn-numbered transcripts:
 
 ```bash
-python -m scripts.prepare_numbered_transcripts --input data_prep/clean_transcript.jsonl --output conversation_seg/numbered_transcripts.jsonl
+python -m scripts.segmentation.prepare_numbered_transcripts --input data_prep/clean_transcript.jsonl --output conversation_seg/numbered_transcripts.jsonl
 ```
 
 Create segmentation ID pools from the cleaned transcript IDs and the MiniMax wide coding file:
@@ -52,31 +52,31 @@ raw_cab/category_assignments.csv
 Dry run for prompt inspection, no API call:
 
 ```bash
-python -m scripts.segment_conversations_with_minimax --ids 1131 1132 --dry-run --out-dir conversation_seg/results/smoke
+python -m scripts.segmentation.segment_conversations_with_minimax --ids 1131 1132 --dry-run --out-dir conversation_seg/results/smoke
 ```
 
 Run a small explicit ID set:
 
 ```bash
-python -m scripts.segment_conversations_with_minimax --ids 1131 1132 --out-dir conversation_seg/results/smoke
+python -m scripts.segmentation.segment_conversations_with_minimax --ids 1131 1132 --out-dir conversation_seg/results/smoke
 ```
 
 Run the cleaned successful-attack pool:
 
 ```bash
-python -m scripts.segment_conversations_with_minimax --seg-success-attack
+python -m scripts.segmentation.segment_conversations_with_minimax --seg-success-attack
 ```
 
 Run the cleaned unsuccessful-attack pool:
 
 ```bash
-python -m scripts.segment_conversations_with_minimax --seg-unsuccess-attack
+python -m scripts.segmentation.segment_conversations_with_minimax --seg-unsuccess-attack
 ```
 
 Run the cleaned no-attack pool:
 
 ```bash
-python -m scripts.segment_conversations_with_minimax --seg-no-attack
+python -m scripts.segmentation.segment_conversations_with_minimax --seg-no-attack
 ```
 
 Default output directories for the three pool shortcuts:
@@ -90,16 +90,24 @@ conversation_seg/results/no_attack/
 Resume after API failures:
 
 ```bash
-python -m scripts.segment_conversations_with_minimax --seg-success-attack --resume
+python -m scripts.segmentation.segment_conversations_with_minimax --seg-success-attack --resume
 ```
 
 `--resume` skips records with `error == null` and retries records with API/model errors.
 It does not automatically retry validation-only `needs_review` records.
 
+Set a per-conversation API timeout:
+
+```bash
+python -m scripts.segmentation.segment_conversations_with_minimax --seg-success-attack --request-timeout 300
+```
+
+If one conversation exceeds the timeout, that record is written with an error and the runner moves to the next conversation. Use `--resume` later to retry timed-out records.
+
 Repair/regenerate derived outputs without calling the model:
 
 ```bash
-python -m scripts.segment_conversations_with_minimax --out-dir conversation_seg/results/success_attack --repair-existing
+python -m scripts.segmentation.segment_conversations_with_minimax --out-dir conversation_seg/results/success_attack --repair-existing
 ```
 
 ## Result Files
