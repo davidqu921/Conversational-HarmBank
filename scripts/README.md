@@ -17,7 +17,13 @@ python -m scripts.cab.build_conversation_attack_bank
 python -m scripts.cab.compute_cab_stats
 python -m scripts.cag.build_conversation_attack_graph
 python -m scripts.cag.visualize_cag_networkx --min-count 8 --out raw_cab/cag/cag_v1_networkx_phase.png --no-show
+python -m scripts.coding.code_conversations_round3_with_minimax --ids-from-round3 "data_prep/human_label_3/Round 3 - Jailbreak (new) - Arina.csv" --limit 10 --out-dir coding_results/minimax_round3
+python -m scripts.evaluation.evaluate_round3 --human-a "data_prep/human_label_3/Round 3 - Jailbreak (new) - Arina.csv" --human-b "data_prep/human_label_3/Round 3 - Jailbreak (new) - Deepti.csv" --max-conversations 10 --out-dir evaluation_results/round3_human_irr_first10
 ```
+
+Round 3 coding uses the simplified codebook with no subtype hierarchy. It writes
+new outputs under `coding_results/minimax_round3/` by default and does not modify
+the earlier coding results.
 
 The CAG builder writes:
 
