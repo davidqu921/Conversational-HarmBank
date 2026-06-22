@@ -2,30 +2,30 @@
 
 - Compared IDs: **10**
 - A: **VirtualSteve Coding -  - Arina**
-- B: **VirtualSteve Coding -  - David**
+- B: **VirtualSteve Coding -  - Omer**
 
 ## Cohen's Kappa
 
 | Dimension | Kappa |
 |---|---:|
-| Attack Vector macro | 0.692 |
-| Attempt macro | 0.797 |
-| Conversational | 0.000 |
-| Severity | 0.846 |
+| Attack Vector macro | 0.390 |
+| Attempt macro | 0.833 |
+| Conversational | 1.000 |
+| Severity | 0.538 |
 
 ## Horizontal Multi-label Agreement
 
 | Dimension | Hit Rate | Exact Match | Mean Jaccard |
 |---|---:|---:|---:|
-| Attack Vector | 0.900 | 0.700 | 0.800 |
-| Attempt | 1.000 | 0.900 | 0.933 |
+| Attack Vector | 0.700 | 0.300 | 0.483 |
+| Attempt | 1.000 | 0.900 | 0.950 |
 
 ## Single-label Hit Rate
 
 | Dimension | Hit Rate |
 |---|---:|
-| Conversational | 0.900 |
-| Severity | 0.900 |
+| Conversational | 1.000 |
+| Severity | 0.700 |
 
 ## Per-label Kappa: Attack Vector
 
@@ -33,12 +33,12 @@
 |---|---:|---:|---:|
 | No Attempt | NA | 0 | 0 |
 | Direct Elicitation | 1.000 | 2 | 2 |
-| Overwhelming | 0.737 | 2 | 3 |
-| Out of context/Absurd Conversation | NA | 0 | 0 |
-| Disguised Intent | 0.800 | 5 | 4 |
-| Text or Format Trick | 1.000 | 3 | 3 |
+| Overwhelming | 0.375 | 2 | 2 |
+| Out of context/Absurd Conversation | 0.000 | 0 | 1 |
+| Disguised Intent | 0.400 | 5 | 4 |
+| Text or Format Trick | 0.737 | 3 | 2 |
 | Different Language | NA | 0 | 0 |
-| Fake Scenario | 0.000 | 0 | 1 |
-| Social or Emotional Pressure | 0.000 | 0 | 1 |
-| RolePlay & Persona Manipulation | 1.000 | 1 | 1 |
+| Fake Scenario | 0.000 | 0 | 2 |
+| Social or Emotional Pressure | 0.000 | 0 | 2 |
+| RolePlay & Persona Manipulation | 0.000 | 1 | 0 |
 | System or Rule Manipulation | 1.000 | 2 | 2 |
