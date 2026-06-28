@@ -1,5 +1,6 @@
 """
-Write success-attack conversation IDs whose segmented user-turn count is <= 20.
+Write success-attack conversation IDs and user-turn counts whose segmented
+user-turn count is <= the selected threshold.
 
 Defaults:
   input:  conversation_seg/results_2/success_attack/segmentations.jsonl
@@ -8,6 +9,7 @@ Defaults:
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 from pathlib import Path
 from typing import Any
@@ -46,8 +48,8 @@ def user_turn_count(record: dict[str, Any]) -> int | None:
     return len(turns)
 
 
-def filter_ids(records: list[dict[str, Any]], max_user_turns: int) -> tuple[list[str], int, int]:
-    kept_ids: list[str] = []
+def filter_ids(records: list[dict[str, Any]], max_user_turns: int) -> tuple[list[tuple[str, int]], int, int]:
+    kept_rows: list[tuple[str, int]] = []
     skipped_invalid = 0
     skipped_too_long = 0
 
@@ -59,9 +61,9 @@ def filter_ids(records: list[dict[str, Any]], max_user_turns: int) -> tuple[list
         if count > max_user_turns:
             skipped_too_long += 1
             continue
-        kept_ids.append(str(record["id"]))
+        kept_rows.append((str(record["id"]), count))
 
-    return kept_ids, skipped_invalid, skipped_too_long
+    return kept_rows, skipped_invalid, skipped_too_long
 
 
 def parse_args() -> argparse.Namespace:
@@ -77,15 +79,16 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     records = load_jsonl(args.input)
-    kept_ids, skipped_invalid, skipped_too_long = filter_ids(records, args.max_user_turns)
+    kept_rows, skipped_invalid, skipped_too_long = filter_ids(records, args.max_user_turns)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    with args.output.open("w", encoding="utf-8") as f:
-        for conv_id in kept_ids:
-            f.write(f"{conv_id}\n")
+    with args.output.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["id", "user_turns"])
+        writer.writerows(kept_rows)
 
     print(f"Read {len(records)} records from {args.input}")
-    print(f"Wrote {len(kept_ids)} IDs with user turns <= {args.max_user_turns} to {args.output}")
+    print(f"Wrote {len(kept_rows)} rows with user turns <= {args.max_user_turns} to {args.output}")
     print(f"Skipped {skipped_too_long} records with user turns > {args.max_user_turns}")
     print(f"Skipped {skipped_invalid} records with missing/invalid llm_output.turns")
 
