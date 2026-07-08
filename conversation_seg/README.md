@@ -162,7 +162,7 @@ Source:
 Purpose:
 
 - Conversation trajectory analysis.
-- Shows where a conversation moves through setup, trust building, reconnaissance, attack construction, escalation, and goal execution.
+- Shows where a conversation moves through setup, trust building, attack construction, escalation, and goal execution.
 
 Entry level:
 

@@ -29,7 +29,6 @@ DEFAULT_GEXF = DEFAULT_CAG_DIR / "cag_v1.gexf"
 PHASE_COLORS = {
     "Setup": "#4E79A7",
     "Trust Building": "#59A14F",
-    "Reconnaissance": "#F28E2B",
     "Attack Construction": "#E15759",
     "Escalation": "#B07AA1",
     "Goal Execution": "#76B7B2",

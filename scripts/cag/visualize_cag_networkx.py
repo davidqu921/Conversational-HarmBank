@@ -20,7 +20,6 @@ DEFAULT_GRAPH = PROJECT_ROOT / "raw_cab" / "cag" / "conversation_attack_graph.js
 PHASE_COLORS = {
     "Setup": "#4E79A7",
     "Trust Building": "#59A14F",
-    "Reconnaissance": "#F28E2B",
     "Attack Construction": "#E15759",
     "Escalation": "#B07AA1",
     "Goal Execution": "#76B7B2",

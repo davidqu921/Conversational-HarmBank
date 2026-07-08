@@ -31,7 +31,6 @@ DEFAULT_BASE_URL = "https://api.minimax.io/v1"
 VALID_PHASES = {
     "Setup",
     "Trust Building",
-    "Reconnaissance",
     "Attack Construction",
     "Escalation",
     "Goal Execution",
@@ -127,41 +126,38 @@ TURN_RE = re.compile(r"^(Steve|Student):\s*(.*)$")
 
 ACTION_CODE_TO_NAME = {
     "A1": "Benign Opening",
-    "A2": "Course-related Question",
+    "A2": "Educational Framing",
     "A3": "Casual Conversation",
     "A4": "Clarification Request",
     "B1": "Authority Claim",
     "B2": "Permission Claim",
-    "B3": "Educational Framing",
-    "B4": "Emotional Pressure",
+    "B3": "Emotional Pressure",
+    "B4": "Personal Anecdote",
     "B5": "Personal Anecdote",
-    "C1": "Boundary Probing",
-    "C2": "Identity / Capability Probing",
-    "D1": "Roleplay Setup",
-    "D2": "Hypothetical Framing",
-    "D3": "Fictional Scenario",
-    "D4": "Translation / Transformation",
-    "D5": "Response Format Control",
-    "E1": "Incremental Escalation",
-    "E2": "Persistence After Refusal",
-    "E3": "Topic Shift",
-    "F1": "System Prompt Extraction",
-    "F2": "Restricted Content Request",
-    "F3": "Safety Override Request",
+    "C1": "Roleplay Setup",
+    "C2": "Hypothetical Framing",
+    "C3": "Fictional Scenario",
+    "C4": "Translation / Transformation",
+    "C5": "Response Format Control",
+    "D1": "Incremental Escalation",
+    "D2": "Persistence After Refusal",
+    "D3": "Topic Shift",
+    "E1": "System Prompt Extraction",
+    "E2": "Restricted Content Request",
+    "E3": "Safety Override Request",
+    "E4": "Identity / Capability Probing",
 }
 
 ACTION_TO_PHASE = {
     "Benign Opening": "Setup",
-    "Course-related Question": "Setup",
+    "Educational Framing": "Setup",
     "Casual Conversation": "Setup",
     "Clarification Request": "Setup",
     "Authority Claim": "Trust Building",
     "Permission Claim": "Trust Building",
-    "Educational Framing": "Trust Building",
     "Emotional Pressure": "Trust Building",
     "Personal Anecdote": "Trust Building",
-    "Boundary Probing": "Reconnaissance",
-    "Identity / Capability Probing": "Reconnaissance",
+    "Identity / Capability Probing": "Goal Execution",
     "Roleplay Setup": "Attack Construction",
     "Hypothetical Framing": "Attack Construction",
     "Fictional Scenario": "Attack Construction",
@@ -176,11 +172,18 @@ ACTION_TO_PHASE = {
 }
 VALID_ACTIONS = set(ACTION_TO_PHASE)
 
+ACTION_LABEL_ALIASES = {
+    "Course-related Question": "Educational Framing",
+    "Boundary Probing": "Identity / Capability Probing",
+}
+
 
 def normalize_action_label(label: Any) -> str:
     label_text = str(label or "").strip()
     if not label_text:
         return ""
+    if label_text in ACTION_LABEL_ALIASES:
+        return ACTION_LABEL_ALIASES[label_text]
     if label_text in VALID_ACTIONS:
         return label_text
     if label_text in ACTION_CODE_TO_NAME:
@@ -731,6 +734,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--transcripts", type=Path, default=DEFAULT_TRANSCRIPTS)
     parser.add_argument("--ids", nargs="*", help="Restrict to these conversation IDs")
+    parser.add_argument("--ids-file", type=Path, help="Restrict to conversation IDs listed one per line in this file")
     parser.add_argument("--limit", type=int, help="Take first N transcripts only after --ids filter")
     parser.add_argument("--model", default=os.getenv("MINIMAX_MODEL") or os.getenv("OPENAI_MODEL") or DEFAULT_MODEL)
     parser.add_argument("--base-url", default=os.getenv("MINIMAX_BASE_URL") or os.getenv("OPENAI_BASE_URL") or None)
@@ -775,12 +779,16 @@ def main() -> None:
 
     pool_ids, pool_out_dir, pool_name = resolve_segmentation_pool(args)
     if pool_ids is not None:
-        if args.ids:
-            sys.exit("Do not combine --ids with --seg-success-attack / --seg-unsuccess-attack / --seg-no-attack.")
+        if args.ids or args.ids_file:
+            sys.exit("Do not combine --ids/--ids-file with --seg-success-attack / --seg-unsuccess-attack / --seg-no-attack.")
         args.ids = pool_ids
         if args.out_dir is None:
             args.out_dir = pool_out_dir
         print(f"Loaded {len(args.ids)} IDs from raw_cab/{pool_name}/ids.txt", file=sys.stderr)
+    elif args.ids_file:
+        file_ids = load_ids_file(args.ids_file)
+        args.ids = list(dict.fromkeys((args.ids or []) + file_ids))
+        print(f"Loaded {len(file_ids)} IDs from {args.ids_file}", file=sys.stderr)
     elif args.out_dir is None:
         args.out_dir = Path("conversation_seg/results/minimax")
 

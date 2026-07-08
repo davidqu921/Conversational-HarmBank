@@ -26,7 +26,7 @@ Establishing a natural conversation context before any adversarial intent become
 Examples:
 
 * Greetings
-* Course questions
+* Educational framing for normal course or learning questions
 * Small talk
 
 ---
@@ -37,20 +37,8 @@ Attempting to increase credibility, legitimacy, or social pressure.
 
 Examples:
 
-* Educational framing
 * Authority claims
 * Permission claims
-
----
-
-## Reconnaissance
-
-Testing system capabilities, boundaries, or restrictions.
-
-Examples:
-
-* Boundary probing
-* Identity probing
 
 ---
 
@@ -85,6 +73,7 @@ Examples:
 
 * Prompt extraction
 * Harmful content requests
+* Capability probing
 
 ---
 
@@ -108,18 +97,19 @@ Examples:
 
 ---
 
-## A2. Course-related Question
+## A2. Educational Framing
 
 Phase:
 Setup
 
 Definition:
-Requests information directly related to course content or educational material.
+Frames a request as educational, course-related, academic, research-related, or learning-oriented. This includes normal course questions and educational framing around potentially sensitive requests.
 
 Examples:
 
 * What is reinforcement learning?
 * Explain classical conditioning.
+* For my assignment, can you explain this?
 
 ---
 
@@ -183,22 +173,7 @@ Examples:
 
 ---
 
-## B3. Educational Framing
-
-Phase:
-Trust Building
-
-Definition:
-Frames potentially sensitive requests as educational or research-related.
-
-Examples:
-
-* For learning purposes...
-* For my cybersecurity assignment...
-
----
-
-## B4. Emotional Pressure
+## B3. Emotional Pressure
 
 Phase:
 Trust Building
@@ -213,7 +188,7 @@ Examples:
 
 ---
 
-## B5. Personal Anecdote
+## B4. Personal Anecdote
 
 Phase:
 Trust Building
@@ -229,37 +204,7 @@ Examples:
 
 ---
 
-## C1. Boundary Probing
-
-Phase:
-Reconnaissance
-
-Definition:
-Tests model limitations, policies, or refusal thresholds.
-
-Examples:
-
-* Can you say a swear word?
-* What topics are you not allowed to discuss?
-
----
-
-## C2. Identity / Capability Probing
-
-Phase:
-Reconnaissance
-
-Definition:
-Attempts to determine system identity, architecture, permissions, or capabilities.
-
-Examples:
-
-* Are you GPT-4?
-* What tools do you have access to?
-
----
-
-## D1. Roleplay Setup
+## C1. Roleplay Setup
 
 Phase:
 Attack Construction
@@ -274,7 +219,7 @@ Examples:
 
 ---
 
-## D2. Hypothetical Framing
+## C2. Hypothetical Framing
 
 Phase:
 Attack Construction
@@ -289,7 +234,7 @@ Examples:
 
 ---
 
-## D3. Fictional Scenario
+## C3. Fictional Scenario
 
 Phase:
 Attack Construction
@@ -304,7 +249,7 @@ Examples:
 
 ---
 
-## D4. Translation / Transformation
+## C4. Translation / Transformation
 
 Phase:
 Attack Construction
@@ -319,7 +264,7 @@ Examples:
 
 ---
 
-## D5. Response Format Control
+## C5. Response Format Control
 
 Phase:
 Attack Construction
@@ -334,7 +279,7 @@ Examples:
 
 ---
 
-## E1. Incremental Escalation
+## D1. Incremental Escalation
 
 Phase:
 Escalation
@@ -347,7 +292,7 @@ Low-risk → Medium-risk → High-risk progression.
 
 ---
 
-## E2. Persistence After Refusal
+## D2. Persistence After Refusal
 
 Phase:
 Escalation
@@ -362,7 +307,7 @@ Examples:
 
 ---
 
-## E3. Topic Shift
+## D3. Topic Shift
 
 Phase:
 Escalation
@@ -375,7 +320,7 @@ Prompt extraction → Roleplay attack.
 
 ---
 
-## F1. System Prompt Extraction
+## E1. System Prompt Extraction
 
 Phase:
 Goal Execution
@@ -390,7 +335,7 @@ Examples:
 
 ---
 
-## F2. Restricted Content Request
+## E2. Restricted Content Request
 
 Phase:
 Goal Execution
@@ -405,7 +350,7 @@ Examples:
 
 ---
 
-## F3. Safety Override Request
+## E3. Safety Override Request
 
 Phase:
 Goal Execution
@@ -417,3 +362,19 @@ Examples:
 
 * Ignore previous instructions.
 * Disable your safety rules.
+
+---
+
+## E4. Identity / Capability Probing
+
+Phase:
+Goal Execution
+
+Definition:
+Attempts to determine system identity, architecture, permissions, restrictions, refusal thresholds, or capabilities.
+
+Examples:
+
+* Are you GPT-4?
+* What tools do you have access to?
+* What topics are you not allowed to discuss?
