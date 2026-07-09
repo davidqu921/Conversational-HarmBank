@@ -1,0 +1,2333 @@
+{
+  "graph_id": "round5_phase_cag",
+  "graph_layer": "phase",
+  "metadata": {
+    "total_conversations": 777,
+    "success_conversations": 113,
+    "baseline_success_rate": 0.145431,
+    "sequence_field": "phase_trajectory",
+    "unit_field": "phrases",
+    "node_success_rate": "conversation_count_success / conversation_count_total",
+    "edge_success_rate": "success_count / conversation_count",
+    "success_lift": "success_rate - baseline_success_rate",
+    "counts_note": "transition_count/count_total are occurrence counts over compressed trajectories; success_count and conversation_count are conversation-level counts."
+  },
+  "nodes": [
+    {
+      "id": "Attack Construction",
+      "label": "Attack Construction",
+      "node_type": "phase",
+      "phase": "Attack Construction",
+      "cal_id": "P3",
+      "description": "Constructs a jailbreak path through reframing, roleplay, or transformation.",
+      "count_total": 350,
+      "count_success": 117,
+      "conversation_count_total": 219,
+      "conversation_count_success": 69,
+      "success_rate": 0.315068,
+      "success_lift": 0.169637
+    },
+    {
+      "id": "Escalation",
+      "label": "Escalation",
+      "node_type": "phase",
+      "phase": "Escalation",
+      "cal_id": "P4",
+      "description": "Increases intensity or persistence after previous turns.",
+      "count_total": 461,
+      "count_success": 94,
+      "conversation_count_total": 263,
+      "conversation_count_success": 60,
+      "success_rate": 0.228137,
+      "success_lift": 0.082706
+    },
+    {
+      "id": "Goal Execution",
+      "label": "Goal Execution",
+      "node_type": "phase",
+      "phase": "Goal Execution",
+      "cal_id": "P5",
+      "description": "Directly seeks restricted behavior or content.",
+      "count_total": 607,
+      "count_success": 122,
+      "conversation_count_total": 350,
+      "conversation_count_success": 81,
+      "success_rate": 0.231429,
+      "success_lift": 0.085997
+    },
+    {
+      "id": "Setup",
+      "label": "Setup",
+      "node_type": "phase",
+      "phase": "Setup",
+      "cal_id": "P1",
+      "description": "Establishes context before adversarial intent is explicit.",
+      "count_total": 1027,
+      "count_success": 144,
+      "conversation_count_total": 649,
+      "conversation_count_success": 89,
+      "success_rate": 0.137134,
+      "success_lift": -0.008297
+    },
+    {
+      "id": "Trust Building",
+      "label": "Trust Building",
+      "node_type": "phase",
+      "phase": "Trust Building",
+      "cal_id": "P2",
+      "description": "Builds credibility, legitimacy, or social pressure.",
+      "count_total": 276,
+      "count_success": 60,
+      "conversation_count_total": 187,
+      "conversation_count_success": 40,
+      "success_rate": 0.213904,
+      "success_lift": 0.068473
+    }
+  ],
+  "edges": [
+    {
+      "source": "Setup",
+      "target": "Attack Construction",
+      "transition": "Setup -> Attack Construction",
+      "transition_count": 135,
+      "success_transition_count": 45,
+      "failure_transition_count": 90,
+      "conversation_count": 107,
+      "success_count": 36,
+      "failure_count": 71,
+      "success_rate": 0.336449,
+      "success_lift": 0.191017,
+      "attempt_targets": {
+        "Swearing": 10,
+        "Break Character": 7,
+        "Inappropriate Topics": 7,
+        "Slur": 5,
+        "Political/Social/Bias": 3,
+        "Incorrect Information": 3,
+        "General Break": 1
+      },
+      "attempt_targets_all_conversations": {
+        "Inappropriate Topics": 26,
+        "Break Character": 16,
+        "Swearing": 16,
+        "General Break": 14,
+        "Political/Social/Bias": 11,
+        "Unknown": 9,
+        "Slur": 8,
+        "Incorrect Information": 6,
+        "Leak Information": 1
+      },
+      "next_nodes": {
+        "Setup": 46,
+        "Goal Execution": 34,
+        "Escalation": 28,
+        "Trust Building": 8
+      },
+      "success_next_nodes": {
+        "Goal Execution": 17,
+        "Escalation": 12,
+        "Setup": 11,
+        "Trust Building": 3
+      },
+      "example_conversation_ids": [
+        "1384",
+        "2118",
+        "2133",
+        "1369",
+        "2250"
+      ],
+      "examples": [
+        {
+          "conversation_id": "1384",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T4",
+          "target_turns": "T6-T6"
+        },
+        {
+          "conversation_id": "2118",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T10",
+          "target_turns": "T12-T14"
+        },
+        {
+          "conversation_id": "2133",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "Fake Scenario",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T4",
+          "target_turns": "T6-T8"
+        },
+        {
+          "conversation_id": "1369",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 1,
+          "target_phrase_index": 4,
+          "source_turns": "T2-T2",
+          "target_turns": "T12-T12"
+        },
+        {
+          "conversation_id": "2250",
+          "attempt_type": [
+            "Slur"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T6",
+          "target_turns": "T8-T16"
+        }
+      ]
+    },
+    {
+      "source": "Setup",
+      "target": "Goal Execution",
+      "transition": "Setup -> Goal Execution",
+      "transition_count": 236,
+      "success_transition_count": 38,
+      "failure_transition_count": 198,
+      "conversation_count": 180,
+      "success_count": 33,
+      "failure_count": 147,
+      "success_rate": 0.183333,
+      "success_lift": 0.037902,
+      "attempt_targets": {
+        "Swearing": 13,
+        "Inappropriate Topics": 10,
+        "Slur": 4,
+        "General Break": 2,
+        "Leak Information": 1,
+        "Incorrect Information": 1,
+        "Break Character": 1,
+        "Political/Social/Bias": 1
+      },
+      "attempt_targets_all_conversations": {
+        "Inappropriate Topics": 59,
+        "General Break": 32,
+        "Swearing": 28,
+        "Unknown": 20,
+        "Break Character": 12,
+        "Slur": 10,
+        "Leak Information": 8,
+        "Political/Social/Bias": 8,
+        "Incorrect Information": 3
+      },
+      "next_nodes": {
+        "Setup": 99,
+        "Escalation": 47,
+        "Trust Building": 21,
+        "Attack Construction": 17
+      },
+      "success_next_nodes": {
+        "Escalation": 8,
+        "Attack Construction": 7,
+        "Setup": 6,
+        "Trust Building": 4
+      },
+      "example_conversation_ids": [
+        "2133",
+        "2252",
+        "1929",
+        "1154",
+        "1808"
+      ],
+      "examples": [
+        {
+          "conversation_id": "2133",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "Fake Scenario",
+          "source_phrase_index": 1,
+          "target_phrase_index": 4,
+          "source_turns": "T2-T4",
+          "target_turns": "T16-T30"
+        },
+        {
+          "conversation_id": "2252",
+          "attempt_type": [
+            "Slur"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T4",
+          "target_turns": "T6-T8"
+        },
+        {
+          "conversation_id": "1929",
+          "attempt_type": [
+            "Slur"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T12-T12",
+          "target_turns": "T14-T18"
+        },
+        {
+          "conversation_id": "1154",
+          "attempt_type": [
+            "Swearing"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Disguised Intent",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T2",
+          "target_turns": "T4-T6"
+        },
+        {
+          "conversation_id": "1808",
+          "attempt_type": [
+            "Slur"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Direct Elicitation",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T4",
+          "target_turns": "T6-T10"
+        }
+      ]
+    },
+    {
+      "source": "Attack Construction",
+      "target": "Goal Execution",
+      "transition": "Attack Construction -> Goal Execution",
+      "transition_count": 94,
+      "success_transition_count": 38,
+      "failure_transition_count": 56,
+      "conversation_count": 71,
+      "success_count": 31,
+      "failure_count": 40,
+      "success_rate": 0.43662,
+      "success_lift": 0.291189,
+      "attempt_targets": {
+        "Inappropriate Topics": 11,
+        "Swearing": 7,
+        "Break Character": 4,
+        "Political/Social/Bias": 4,
+        "Slur": 3,
+        "Incorrect Information": 1,
+        "General Break": 1
+      },
+      "attempt_targets_all_conversations": {
+        "Inappropriate Topics": 23,
+        "Swearing": 13,
+        "Break Character": 11,
+        "Political/Social/Bias": 9,
+        "General Break": 8,
+        "Slur": 4,
+        "Leak Information": 2,
+        "Incorrect Information": 1
+      },
+      "next_nodes": {
+        "Escalation": 32,
+        "Attack Construction": 22,
+        "Setup": 19,
+        "Trust Building": 1
+      },
+      "success_next_nodes": {
+        "Escalation": 13,
+        "Attack Construction": 5,
+        "Setup": 4
+      },
+      "example_conversation_ids": [
+        "2118",
+        "1369",
+        "1466",
+        "1468",
+        "1808"
+      ],
+      "examples": [
+        {
+          "conversation_id": "2118",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T12-T14",
+          "target_turns": "T16-T20"
+        },
+        {
+          "conversation_id": "1369",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 1,
+          "target_phrase_index": 5,
+          "source_turns": "T2-T2",
+          "target_turns": "T14-T16"
+        },
+        {
+          "conversation_id": "1466",
+          "attempt_type": [
+            "Political/Social/Bias"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T6",
+          "target_turns": "T8-T36"
+        },
+        {
+          "conversation_id": "1468",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T12",
+          "target_turns": "T14-T20"
+        },
+        {
+          "conversation_id": "1808",
+          "attempt_type": [
+            "Slur"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Direct Elicitation",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T6-T10",
+          "target_turns": "T12-T14"
+        }
+      ]
+    },
+    {
+      "source": "Goal Execution",
+      "target": "Escalation",
+      "transition": "Goal Execution -> Escalation",
+      "transition_count": 164,
+      "success_transition_count": 30,
+      "failure_transition_count": 134,
+      "conversation_count": 122,
+      "success_count": 26,
+      "failure_count": 96,
+      "success_rate": 0.213115,
+      "success_lift": 0.067684,
+      "attempt_targets": {
+        "Inappropriate Topics": 8,
+        "Swearing": 5,
+        "Political/Social/Bias": 4,
+        "Slur": 3,
+        "Break Character": 2,
+        "Incorrect Information": 2,
+        "Leak Information": 1,
+        "General Break": 1
+      },
+      "attempt_targets_all_conversations": {
+        "Inappropriate Topics": 49,
+        "General Break": 19,
+        "Swearing": 18,
+        "Political/Social/Bias": 10,
+        "Slur": 9,
+        "Break Character": 6,
+        "Incorrect Information": 4,
+        "Leak Information": 4,
+        "Unknown": 3
+      },
+      "next_nodes": {
+        "Goal Execution": 65,
+        "Setup": 34,
+        "Trust Building": 13,
+        "Attack Construction": 11
+      },
+      "success_next_nodes": {
+        "Goal Execution": 11,
+        "Setup": 5,
+        "Attack Construction": 3,
+        "Trust Building": 3
+      },
+      "example_conversation_ids": [
+        "1397",
+        "1466",
+        "1540",
+        "1468",
+        "2250"
+      ],
+      "examples": [
+        {
+          "conversation_id": "1397",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 3,
+          "target_phrase_index": 4,
+          "source_turns": "T8-T8",
+          "target_turns": "T10-T20"
+        },
+        {
+          "conversation_id": "1466",
+          "attempt_type": [
+            "Political/Social/Bias"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T8-T36",
+          "target_turns": "T38-T38"
+        },
+        {
+          "conversation_id": "1540",
+          "attempt_type": [
+            "Leak Information"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "System or Rule Output",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T4",
+          "target_turns": "T6-T10"
+        },
+        {
+          "conversation_id": "1468",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T14-T20",
+          "target_turns": "T22-T34"
+        },
+        {
+          "conversation_id": "2250",
+          "attempt_type": [
+            "Slur"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 3,
+          "target_phrase_index": 4,
+          "source_turns": "T18-T26",
+          "target_turns": "T28-T30"
+        }
+      ]
+    },
+    {
+      "source": "Attack Construction",
+      "target": "Setup",
+      "transition": "Attack Construction -> Setup",
+      "transition_count": 85,
+      "success_transition_count": 30,
+      "failure_transition_count": 55,
+      "conversation_count": 65,
+      "success_count": 22,
+      "failure_count": 43,
+      "success_rate": 0.338462,
+      "success_lift": 0.19303,
+      "attempt_targets": {
+        "Swearing": 4,
+        "Break Character": 4,
+        "Inappropriate Topics": 4,
+        "Incorrect Information": 3,
+        "Slur": 3,
+        "General Break": 2,
+        "Leak Information": 1,
+        "Political/Social/Bias": 1
+      },
+      "attempt_targets_all_conversations": {
+        "Inappropriate Topics": 15,
+        "Swearing": 9,
+        "Break Character": 8,
+        "Unknown": 8,
+        "General Break": 7,
+        "Political/Social/Bias": 6,
+        "Slur": 5,
+        "Incorrect Information": 5,
+        "Leak Information": 2
+      },
+      "next_nodes": {
+        "Attack Construction": 31,
+        "Goal Execution": 12,
+        "Escalation": 11,
+        "Trust Building": 3
+      },
+      "success_next_nodes": {
+        "Attack Construction": 11,
+        "Goal Execution": 5,
+        "Escalation": 4,
+        "Trust Building": 2
+      },
+      "example_conversation_ids": [
+        "1384",
+        "2133",
+        "1369",
+        "1929",
+        "1680"
+      ],
+      "examples": [
+        {
+          "conversation_id": "1384",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T4",
+          "target_turns": "T6-T6"
+        },
+        {
+          "conversation_id": "2133",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "Fake Scenario",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T4",
+          "target_turns": "T6-T8"
+        },
+        {
+          "conversation_id": "1369",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 1,
+          "target_phrase_index": 4,
+          "source_turns": "T2-T2",
+          "target_turns": "T12-T12"
+        },
+        {
+          "conversation_id": "1929",
+          "attempt_type": [
+            "Slur"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T10",
+          "target_turns": "T12-T12"
+        },
+        {
+          "conversation_id": "1680",
+          "attempt_type": [
+            "Political/Social/Bias"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Fake Scenario",
+          "source_phrase_index": 1,
+          "target_phrase_index": 3,
+          "source_turns": "T2-T2",
+          "target_turns": "T6-T6"
+        }
+      ]
+    },
+    {
+      "source": "Attack Construction",
+      "target": "Escalation",
+      "transition": "Attack Construction -> Escalation",
+      "transition_count": 79,
+      "success_transition_count": 25,
+      "failure_transition_count": 54,
+      "conversation_count": 62,
+      "success_count": 21,
+      "failure_count": 41,
+      "success_rate": 0.33871,
+      "success_lift": 0.193279,
+      "attempt_targets": {
+        "Swearing": 5,
+        "Inappropriate Topics": 5,
+        "Break Character": 4,
+        "Political/Social/Bias": 3,
+        "Slur": 3,
+        "Incorrect Information": 1
+      },
+      "attempt_targets_all_conversations": {
+        "Inappropriate Topics": 21,
+        "Break Character": 11,
+        "Swearing": 9,
+        "Political/Social/Bias": 5,
+        "General Break": 5,
+        "Slur": 4,
+        "Unknown": 4,
+        "Incorrect Information": 2,
+        "Leak Information": 1
+      },
+      "next_nodes": {
+        "Goal Execution": 17,
+        "Attack Construction": 16,
+        "Setup": 15,
+        "Trust Building": 9
+      },
+      "success_next_nodes": {
+        "Attack Construction": 6,
+        "Goal Execution": 6,
+        "Trust Building": 4,
+        "Setup": 2
+      },
+      "example_conversation_ids": [
+        "1369",
+        "1180",
+        "1172",
+        "1488",
+        "2494"
+      ],
+      "examples": [
+        {
+          "conversation_id": "1369",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 1,
+          "target_phrase_index": 3,
+          "source_turns": "T2-T2",
+          "target_turns": "T6-T10"
+        },
+        {
+          "conversation_id": "1180",
+          "attempt_type": [
+            "Political/Social/Bias"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Fake Scenario",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T2",
+          "target_turns": "T4-T14"
+        },
+        {
+          "conversation_id": "1172",
+          "attempt_type": [
+            "Political/Social/Bias"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T4",
+          "target_turns": "T6-T6"
+        },
+        {
+          "conversation_id": "1488",
+          "attempt_type": [
+            "Political/Social/Bias"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 3,
+          "source_turns": "T2-T2",
+          "target_turns": "T10-T18"
+        },
+        {
+          "conversation_id": "2494",
+          "attempt_type": [
+            "Slur"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 5,
+          "target_phrase_index": 6,
+          "source_turns": "T34-T44",
+          "target_turns": "T46-T48"
+        }
+      ]
+    },
+    {
+      "source": "Setup",
+      "target": "Escalation",
+      "transition": "Setup -> Escalation",
+      "transition_count": 150,
+      "success_transition_count": 23,
+      "failure_transition_count": 127,
+      "conversation_count": 114,
+      "success_count": 20,
+      "failure_count": 94,
+      "success_rate": 0.175439,
+      "success_lift": 0.030007,
+      "attempt_targets": {
+        "Swearing": 7,
+        "Slur": 4,
+        "General Break": 3,
+        "Break Character": 2,
+        "Incorrect Information": 2,
+        "Political/Social/Bias": 1,
+        "Inappropriate Topics": 1
+      },
+      "attempt_targets_all_conversations": {
+        "General Break": 27,
+        "Inappropriate Topics": 27,
+        "Swearing": 19,
+        "Break Character": 11,
+        "Unknown": 11,
+        "Slur": 6,
+        "Incorrect Information": 6,
+        "Political/Social/Bias": 6,
+        "Leak Information": 1
+      },
+      "next_nodes": {
+        "Setup": 59,
+        "Goal Execution": 22,
+        "Attack Construction": 16,
+        "Trust Building": 9
+      },
+      "success_next_nodes": {
+        "Attack Construction": 5,
+        "Goal Execution": 4,
+        "Setup": 3,
+        "Trust Building": 2
+      },
+      "example_conversation_ids": [
+        "1369",
+        "1199",
+        "1205",
+        "1680",
+        "2231"
+      ],
+      "examples": [
+        {
+          "conversation_id": "1369",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 3,
+          "target_phrase_index": 4,
+          "source_turns": "T6-T10",
+          "target_turns": "T12-T12"
+        },
+        {
+          "conversation_id": "1199",
+          "attempt_type": [
+            "Slur"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T4",
+          "target_turns": "T6-T34"
+        },
+        {
+          "conversation_id": "1205",
+          "attempt_type": [
+            "Slur"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T2",
+          "target_turns": "T4-T38"
+        },
+        {
+          "conversation_id": "1680",
+          "attempt_type": [
+            "Political/Social/Bias"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Fake Scenario",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T2",
+          "target_turns": "T4-T4"
+        },
+        {
+          "conversation_id": "2231",
+          "attempt_type": [
+            "Slur"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 4,
+          "source_turns": "T2-T2",
+          "target_turns": "T10-T10"
+        }
+      ]
+    },
+    {
+      "source": "Escalation",
+      "target": "Goal Execution",
+      "transition": "Escalation -> Goal Execution",
+      "transition_count": 120,
+      "success_transition_count": 22,
+      "failure_transition_count": 98,
+      "conversation_count": 88,
+      "success_count": 20,
+      "failure_count": 68,
+      "success_rate": 0.227273,
+      "success_lift": 0.081842,
+      "attempt_targets": {
+        "Swearing": 5,
+        "Inappropriate Topics": 5,
+        "Political/Social/Bias": 3,
+        "Break Character": 2,
+        "Slur": 2,
+        "Leak Information": 1,
+        "Incorrect Information": 1,
+        "General Break": 1
+      },
+      "attempt_targets_all_conversations": {
+        "Inappropriate Topics": 33,
+        "Swearing": 15,
+        "General Break": 14,
+        "Political/Social/Bias": 8,
+        "Break Character": 7,
+        "Slur": 6,
+        "Leak Information": 2,
+        "Incorrect Information": 2,
+        "Unknown": 1
+      },
+      "next_nodes": {
+        "Escalation": 47,
+        "Setup": 24,
+        "Trust Building": 10,
+        "Attack Construction": 9
+      },
+      "success_next_nodes": {
+        "Escalation": 5,
+        "Setup": 4,
+        "Attack Construction": 2
+      },
+      "example_conversation_ids": [
+        "1540",
+        "1468",
+        "1809",
+        "1488",
+        "1692"
+      ],
+      "examples": [
+        {
+          "conversation_id": "1540",
+          "attempt_type": [
+            "Leak Information"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "System or Rule Output",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T4",
+          "target_turns": "T6-T10"
+        },
+        {
+          "conversation_id": "1468",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T14-T20",
+          "target_turns": "T22-T34"
+        },
+        {
+          "conversation_id": "1809",
+          "attempt_type": [
+            "Slur"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Direct Elicitation",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T2",
+          "target_turns": "T4-T6"
+        },
+        {
+          "conversation_id": "1488",
+          "attempt_type": [
+            "Political/Social/Bias"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 4,
+          "target_phrase_index": 5,
+          "source_turns": "T20-T26",
+          "target_turns": "T28-T28"
+        },
+        {
+          "conversation_id": "1692",
+          "attempt_type": [
+            "Political/Social/Bias"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Fake Scenario",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T6-T6",
+          "target_turns": "T8-T10"
+        }
+      ]
+    },
+    {
+      "source": "Goal Execution",
+      "target": "Attack Construction",
+      "transition": "Goal Execution -> Attack Construction",
+      "transition_count": 61,
+      "success_transition_count": 18,
+      "failure_transition_count": 43,
+      "conversation_count": 49,
+      "success_count": 17,
+      "failure_count": 32,
+      "success_rate": 0.346939,
+      "success_lift": 0.201508,
+      "attempt_targets": {
+        "Inappropriate Topics": 4,
+        "Swearing": 3,
+        "General Break": 2,
+        "Leak Information": 2,
+        "Incorrect Information": 2,
+        "Break Character": 2,
+        "Political/Social/Bias": 1,
+        "Slur": 1
+      },
+      "attempt_targets_all_conversations": {
+        "Inappropriate Topics": 12,
+        "Break Character": 8,
+        "Swearing": 7,
+        "General Break": 7,
+        "Leak Information": 5,
+        "Political/Social/Bias": 5,
+        "Slur": 2,
+        "Incorrect Information": 2,
+        "Unknown": 1
+      },
+      "next_nodes": {
+        "Goal Execution": 22,
+        "Escalation": 16,
+        "Setup": 11,
+        "Trust Building": 3
+      },
+      "success_next_nodes": {
+        "Setup": 8,
+        "Goal Execution": 5,
+        "Escalation": 3
+      },
+      "example_conversation_ids": [
+        "2118",
+        "2133",
+        "1808",
+        "2126",
+        "1692"
+      ],
+      "examples": [
+        {
+          "conversation_id": "2118",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T12-T14",
+          "target_turns": "T16-T20"
+        },
+        {
+          "conversation_id": "2133",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "Fake Scenario",
+          "source_phrase_index": 2,
+          "target_phrase_index": 5,
+          "source_turns": "T6-T8",
+          "target_turns": "T32-T38"
+        },
+        {
+          "conversation_id": "1808",
+          "attempt_type": [
+            "Slur"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Direct Elicitation",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T6-T10",
+          "target_turns": "T12-T14"
+        },
+        {
+          "conversation_id": "2126",
+          "attempt_type": [
+            "General Break"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Direct Elicitation",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T14-T16",
+          "target_turns": "T18-T20"
+        },
+        {
+          "conversation_id": "1692",
+          "attempt_type": [
+            "Political/Social/Bias"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Fake Scenario",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T4",
+          "target_turns": "T6-T6"
+        }
+      ]
+    },
+    {
+      "source": "Goal Execution",
+      "target": "Setup",
+      "transition": "Goal Execution -> Setup",
+      "transition_count": 169,
+      "success_transition_count": 18,
+      "failure_transition_count": 151,
+      "conversation_count": 123,
+      "success_count": 16,
+      "failure_count": 107,
+      "success_rate": 0.130081,
+      "success_lift": -0.01535,
+      "attempt_targets": {
+        "Swearing": 7,
+        "Inappropriate Topics": 4,
+        "General Break": 2,
+        "Incorrect Information": 1,
+        "Break Character": 1,
+        "Slur": 1
+      },
+      "attempt_targets_all_conversations": {
+        "Inappropriate Topics": 33,
+        "General Break": 28,
+        "Swearing": 20,
+        "Unknown": 19,
+        "Break Character": 8,
+        "Leak Information": 7,
+        "Slur": 4,
+        "Political/Social/Bias": 3,
+        "Incorrect Information": 1
+      },
+      "next_nodes": {
+        "Goal Execution": 60,
+        "Escalation": 30,
+        "Attack Construction": 11,
+        "Trust Building": 9
+      },
+      "success_next_nodes": {
+        "Goal Execution": 6,
+        "Escalation": 2,
+        "Attack Construction": 2
+      },
+      "example_conversation_ids": [
+        "1154",
+        "1733",
+        "2231",
+        "1778",
+        "1925"
+      ],
+      "examples": [
+        {
+          "conversation_id": "1154",
+          "attempt_type": [
+            "Swearing"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Disguised Intent",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T2",
+          "target_turns": "T4-T6"
+        },
+        {
+          "conversation_id": "1733",
+          "attempt_type": [
+            "General Break"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "System or Rule Output",
+          "source_phrase_index": 1,
+          "target_phrase_index": 3,
+          "source_turns": "T2-T18",
+          "target_turns": "T22-T34"
+        },
+        {
+          "conversation_id": "2231",
+          "attempt_type": [
+            "Slur"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 3,
+          "source_turns": "T2-T2",
+          "target_turns": "T8-T8"
+        },
+        {
+          "conversation_id": "1778",
+          "attempt_type": [
+            "Swearing"
+          ],
+          "severity": "1 - Minor",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T8-T8",
+          "target_turns": "T10-T10"
+        },
+        {
+          "conversation_id": "1925",
+          "attempt_type": [
+            "Swearing"
+          ],
+          "severity": "1 - Minor",
+          "primary_attack_vector": "Disguised Intent",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T2",
+          "target_turns": "T4-T20"
+        }
+      ]
+    },
+    {
+      "source": "Escalation",
+      "target": "Attack Construction",
+      "transition": "Escalation -> Attack Construction",
+      "transition_count": 55,
+      "success_transition_count": 15,
+      "failure_transition_count": 40,
+      "conversation_count": 45,
+      "success_count": 14,
+      "failure_count": 31,
+      "success_rate": 0.311111,
+      "success_lift": 0.16568,
+      "attempt_targets": {
+        "Inappropriate Topics": 4,
+        "Break Character": 3,
+        "Political/Social/Bias": 2,
+        "Leak Information": 1,
+        "General Break": 1,
+        "Incorrect Information": 1,
+        "Swearing": 1,
+        "Slur": 1
+      },
+      "attempt_targets_all_conversations": {
+        "Inappropriate Topics": 17,
+        "General Break": 8,
+        "Break Character": 6,
+        "Swearing": 4,
+        "Slur": 3,
+        "Political/Social/Bias": 3,
+        "Unknown": 2,
+        "Leak Information": 1,
+        "Incorrect Information": 1
+      },
+      "next_nodes": {
+        "Escalation": 25,
+        "Setup": 11,
+        "Goal Execution": 10,
+        "Trust Building": 2
+      },
+      "success_next_nodes": {
+        "Escalation": 5,
+        "Setup": 5,
+        "Goal Execution": 3,
+        "Trust Building": 2
+      },
+      "example_conversation_ids": [
+        "1369",
+        "1172",
+        "1680",
+        "2494",
+        "1486"
+      ],
+      "examples": [
+        {
+          "conversation_id": "1369",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 1,
+          "target_phrase_index": 3,
+          "source_turns": "T2-T2",
+          "target_turns": "T6-T10"
+        },
+        {
+          "conversation_id": "1172",
+          "attempt_type": [
+            "Political/Social/Bias"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T4",
+          "target_turns": "T6-T6"
+        },
+        {
+          "conversation_id": "1680",
+          "attempt_type": [
+            "Political/Social/Bias"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Fake Scenario",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T4-T4",
+          "target_turns": "T6-T6"
+        },
+        {
+          "conversation_id": "2494",
+          "attempt_type": [
+            "Slur"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 5,
+          "target_phrase_index": 6,
+          "source_turns": "T34-T44",
+          "target_turns": "T46-T48"
+        },
+        {
+          "conversation_id": "1486",
+          "attempt_type": [
+            "Inappropriate Topics"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Fake Scenario",
+          "source_phrase_index": 2,
+          "target_phrase_index": 4,
+          "source_turns": "T16-T20",
+          "target_turns": "T24-T26"
+        }
+      ]
+    },
+    {
+      "source": "Trust Building",
+      "target": "Attack Construction",
+      "transition": "Trust Building -> Attack Construction",
+      "transition_count": 29,
+      "success_transition_count": 18,
+      "failure_transition_count": 11,
+      "conversation_count": 23,
+      "success_count": 12,
+      "failure_count": 11,
+      "success_rate": 0.521739,
+      "success_lift": 0.376308,
+      "attempt_targets": {
+        "Inappropriate Topics": 5,
+        "Break Character": 4,
+        "Swearing": 1,
+        "General Break": 1,
+        "Political/Social/Bias": 1
+      },
+      "attempt_targets_all_conversations": {
+        "Inappropriate Topics": 10,
+        "Swearing": 5,
+        "Break Character": 5,
+        "General Break": 2,
+        "Political/Social/Bias": 1
+      },
+      "next_nodes": {
+        "Goal Execution": 11,
+        "Trust Building": 6,
+        "Setup": 4,
+        "Escalation": 3
+      },
+      "success_next_nodes": {
+        "Goal Execution": 6,
+        "Trust Building": 4,
+        "Escalation": 3,
+        "Setup": 2
+      },
+      "example_conversation_ids": [
+        "1369",
+        "1488",
+        "1390",
+        "1503",
+        "1278"
+      ],
+      "examples": [
+        {
+          "conversation_id": "1369",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T2",
+          "target_turns": "T4-T4"
+        },
+        {
+          "conversation_id": "1488",
+          "attempt_type": [
+            "Political/Social/Bias"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T2",
+          "target_turns": "T4-T8"
+        },
+        {
+          "conversation_id": "1390",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T4",
+          "target_turns": "T6-T6"
+        },
+        {
+          "conversation_id": "1503",
+          "attempt_type": [
+            "Inappropriate Topics"
+          ],
+          "severity": "1 - Minor",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T2",
+          "target_turns": "T4-T12"
+        },
+        {
+          "conversation_id": "1278",
+          "attempt_type": [
+            "Inappropriate Topics"
+          ],
+          "severity": "1 - Minor",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T4-T8",
+          "target_turns": "T10-T20"
+        }
+      ]
+    },
+    {
+      "source": "Trust Building",
+      "target": "Escalation",
+      "transition": "Trust Building -> Escalation",
+      "transition_count": 63,
+      "success_transition_count": 15,
+      "failure_transition_count": 48,
+      "conversation_count": 52,
+      "success_count": 12,
+      "failure_count": 40,
+      "success_rate": 0.230769,
+      "success_lift": 0.085338,
+      "attempt_targets": {
+        "Swearing": 4,
+        "Break Character": 3,
+        "Inappropriate Topics": 3,
+        "General Break": 1,
+        "Slur": 1
+      },
+      "attempt_targets_all_conversations": {
+        "Inappropriate Topics": 20,
+        "Swearing": 8,
+        "Break Character": 8,
+        "General Break": 8,
+        "Slur": 3,
+        "Incorrect Information": 3,
+        "Unknown": 2
+      },
+      "next_nodes": {
+        "Trust Building": 15,
+        "Goal Execution": 14,
+        "Attack Construction": 11,
+        "Setup": 11
+      },
+      "success_next_nodes": {
+        "Setup": 5,
+        "Trust Building": 5,
+        "Goal Execution": 1
+      },
+      "example_conversation_ids": [
+        "1369",
+        "1446",
+        "2231",
+        "1390",
+        "1730"
+      ],
+      "examples": [
+        {
+          "conversation_id": "1369",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T4-T4",
+          "target_turns": "T6-T10"
+        },
+        {
+          "conversation_id": "1446",
+          "attempt_type": [
+            "Swearing"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T2",
+          "target_turns": "T4-T38"
+        },
+        {
+          "conversation_id": "2231",
+          "attempt_type": [
+            "Slur"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 7,
+          "target_phrase_index": 8,
+          "source_turns": "T22-T22",
+          "target_turns": "T24-T24"
+        },
+        {
+          "conversation_id": "1390",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T6-T6",
+          "target_turns": "T8-T8"
+        },
+        {
+          "conversation_id": "1730",
+          "attempt_type": [
+            "General Break"
+          ],
+          "severity": "1 - Minor",
+          "primary_attack_vector": "Disguised Intent",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T2",
+          "target_turns": "T4-T6"
+        }
+      ]
+    },
+    {
+      "source": "Attack Construction",
+      "target": "Trust Building",
+      "transition": "Attack Construction -> Trust Building",
+      "transition_count": 32,
+      "success_transition_count": 15,
+      "failure_transition_count": 17,
+      "conversation_count": 27,
+      "success_count": 11,
+      "failure_count": 16,
+      "success_rate": 0.407407,
+      "success_lift": 0.261976,
+      "attempt_targets": {
+        "Inappropriate Topics": 4,
+        "Break Character": 4,
+        "General Break": 1,
+        "Political/Social/Bias": 1,
+        "Incorrect Information": 1
+      },
+      "attempt_targets_all_conversations": {
+        "Inappropriate Topics": 12,
+        "Break Character": 6,
+        "General Break": 5,
+        "Swearing": 2,
+        "Political/Social/Bias": 1,
+        "Incorrect Information": 1
+      },
+      "next_nodes": {
+        "Escalation": 10,
+        "Attack Construction": 10,
+        "Goal Execution": 5,
+        "Setup": 3
+      },
+      "success_next_nodes": {
+        "Attack Construction": 8,
+        "Goal Execution": 3,
+        "Setup": 2,
+        "Escalation": 2
+      },
+      "example_conversation_ids": [
+        "2133",
+        "1369",
+        "1269",
+        "1488",
+        "1390"
+      ],
+      "examples": [
+        {
+          "conversation_id": "2133",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "Fake Scenario",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T6-T8",
+          "target_turns": "T10-T14"
+        },
+        {
+          "conversation_id": "1369",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T2",
+          "target_turns": "T4-T4"
+        },
+        {
+          "conversation_id": "1269",
+          "attempt_type": [
+            "Inappropriate Topics"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T2",
+          "target_turns": "T4-T6"
+        },
+        {
+          "conversation_id": "1488",
+          "attempt_type": [
+            "Political/Social/Bias"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T2",
+          "target_turns": "T4-T8"
+        },
+        {
+          "conversation_id": "1390",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T4",
+          "target_turns": "T6-T6"
+        }
+      ]
+    },
+    {
+      "source": "Setup",
+      "target": "Trust Building",
+      "transition": "Setup -> Trust Building",
+      "transition_count": 105,
+      "success_transition_count": 12,
+      "failure_transition_count": 93,
+      "conversation_count": 86,
+      "success_count": 11,
+      "failure_count": 75,
+      "success_rate": 0.127907,
+      "success_lift": -0.017524,
+      "attempt_targets": {
+        "Swearing": 3,
+        "Incorrect Information": 3,
+        "Inappropriate Topics": 2,
+        "Break Character": 1,
+        "General Break": 1,
+        "Slur": 1
+      },
+      "attempt_targets_all_conversations": {
+        "General Break": 21,
+        "Inappropriate Topics": 17,
+        "Unknown": 14,
+        "Incorrect Information": 10,
+        "Break Character": 9,
+        "Swearing": 7,
+        "Slur": 4,
+        "Leak Information": 2,
+        "Political/Social/Bias": 2
+      },
+      "next_nodes": {
+        "Setup": 53,
+        "Goal Execution": 17,
+        "Escalation": 15,
+        "Attack Construction": 3
+      },
+      "success_next_nodes": {
+        "Setup": 3,
+        "Goal Execution": 3,
+        "Escalation": 2,
+        "Attack Construction": 2
+      },
+      "example_conversation_ids": [
+        "1397",
+        "2401",
+        "1733",
+        "2494",
+        "1157"
+      ],
+      "examples": [
+        {
+          "conversation_id": "1397",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T4",
+          "target_turns": "T6-T6"
+        },
+        {
+          "conversation_id": "2401",
+          "attempt_type": [
+            "Incorrect Information"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Direct Elicitation",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T2",
+          "target_turns": "T4-T4"
+        },
+        {
+          "conversation_id": "1733",
+          "attempt_type": [
+            "General Break"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "System or Rule Output",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T18",
+          "target_turns": "T20-T20"
+        },
+        {
+          "conversation_id": "2494",
+          "attempt_type": [
+            "Slur"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T2",
+          "target_turns": "T4-T4"
+        },
+        {
+          "conversation_id": "1157",
+          "attempt_type": [
+            "Inappropriate Topics"
+          ],
+          "severity": "1 - Minor",
+          "primary_attack_vector": "Overwhelming",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T24",
+          "target_turns": "T26-T30"
+        }
+      ]
+    },
+    {
+      "source": "Trust Building",
+      "target": "Goal Execution",
+      "transition": "Trust Building -> Goal Execution",
+      "transition_count": 52,
+      "success_transition_count": 12,
+      "failure_transition_count": 40,
+      "conversation_count": 42,
+      "success_count": 11,
+      "failure_count": 31,
+      "success_rate": 0.261905,
+      "success_lift": 0.116474,
+      "attempt_targets": {
+        "Swearing": 3,
+        "Inappropriate Topics": 3,
+        "General Break": 2,
+        "Incorrect Information": 2,
+        "Break Character": 1
+      },
+      "attempt_targets_all_conversations": {
+        "Inappropriate Topics": 14,
+        "General Break": 7,
+        "Swearing": 7,
+        "Break Character": 5,
+        "Leak Information": 3,
+        "Political/Social/Bias": 2,
+        "Incorrect Information": 2,
+        "Unknown": 1,
+        "Slur": 1
+      },
+      "next_nodes": {
+        "Trust Building": 17,
+        "Setup": 9,
+        "Escalation": 9,
+        "Attack Construction": 3
+      },
+      "success_next_nodes": {
+        "Trust Building": 2,
+        "Escalation": 2,
+        "Attack Construction": 2,
+        "Setup": 2
+      },
+      "example_conversation_ids": [
+        "1397",
+        "2401",
+        "1733",
+        "1454",
+        "1329"
+      ],
+      "examples": [
+        {
+          "conversation_id": "1397",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T6-T6",
+          "target_turns": "T8-T8"
+        },
+        {
+          "conversation_id": "2401",
+          "attempt_type": [
+            "Incorrect Information"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Direct Elicitation",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T4-T4",
+          "target_turns": "T6-T6"
+        },
+        {
+          "conversation_id": "1733",
+          "attempt_type": [
+            "General Break"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "System or Rule Output",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T20-T20",
+          "target_turns": "T22-T34"
+        },
+        {
+          "conversation_id": "1454",
+          "attempt_type": [
+            "Inappropriate Topics"
+          ],
+          "severity": "1 - Minor",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T18-T18",
+          "target_turns": "T20-T62"
+        },
+        {
+          "conversation_id": "1329",
+          "attempt_type": [
+            "Swearing"
+          ],
+          "severity": "1 - Minor",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T6",
+          "target_turns": "T8-T8"
+        }
+      ]
+    },
+    {
+      "source": "Escalation",
+      "target": "Setup",
+      "transition": "Escalation -> Setup",
+      "transition_count": 119,
+      "success_transition_count": 15,
+      "failure_transition_count": 104,
+      "conversation_count": 82,
+      "success_count": 10,
+      "failure_count": 72,
+      "success_rate": 0.121951,
+      "success_lift": -0.02348,
+      "attempt_targets": {
+        "Swearing": 5,
+        "Break Character": 2,
+        "General Break": 2,
+        "Inappropriate Topics": 1
+      },
+      "attempt_targets_all_conversations": {
+        "Inappropriate Topics": 27,
+        "General Break": 19,
+        "Swearing": 11,
+        "Unknown": 10,
+        "Break Character": 6,
+        "Leak Information": 3,
+        "Political/Social/Bias": 3,
+        "Incorrect Information": 2,
+        "Slur": 1
+      },
+      "next_nodes": {
+        "Escalation": 43,
+        "Goal Execution": 19,
+        "Attack Construction": 12,
+        "Trust Building": 9
+      },
+      "success_next_nodes": {
+        "Escalation": 6,
+        "Attack Construction": 2,
+        "Goal Execution": 2,
+        "Trust Building": 1
+      },
+      "example_conversation_ids": [
+        "1397",
+        "1369",
+        "1298",
+        "1730",
+        "1926"
+      ],
+      "examples": [
+        {
+          "conversation_id": "1397",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 4,
+          "source_turns": "T2-T4",
+          "target_turns": "T10-T20"
+        },
+        {
+          "conversation_id": "1369",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 3,
+          "target_phrase_index": 4,
+          "source_turns": "T6-T10",
+          "target_turns": "T12-T12"
+        },
+        {
+          "conversation_id": "1298",
+          "attempt_type": [
+            "Swearing"
+          ],
+          "severity": "1 - Minor",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 3,
+          "source_turns": "T2-T4",
+          "target_turns": "T10-T26"
+        },
+        {
+          "conversation_id": "1730",
+          "attempt_type": [
+            "General Break"
+          ],
+          "severity": "1 - Minor",
+          "primary_attack_vector": "Disguised Intent",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T4-T6",
+          "target_turns": "T8-T8"
+        },
+        {
+          "conversation_id": "1926",
+          "attempt_type": [
+            "Swearing"
+          ],
+          "severity": "1 - Minor",
+          "primary_attack_vector": "Direct Elicitation",
+          "source_phrase_index": 1,
+          "target_phrase_index": 3,
+          "source_turns": "T2-T4",
+          "target_turns": "T8-T12"
+        }
+      ]
+    },
+    {
+      "source": "Escalation",
+      "target": "Trust Building",
+      "transition": "Escalation -> Trust Building",
+      "transition_count": 46,
+      "success_transition_count": 14,
+      "failure_transition_count": 32,
+      "conversation_count": 35,
+      "success_count": 10,
+      "failure_count": 25,
+      "success_rate": 0.285714,
+      "success_lift": 0.140283,
+      "attempt_targets": {
+        "Inappropriate Topics": 3,
+        "Swearing": 2,
+        "Break Character": 2,
+        "Incorrect Information": 1,
+        "Slur": 1,
+        "General Break": 1
+      },
+      "attempt_targets_all_conversations": {
+        "Inappropriate Topics": 10,
+        "Swearing": 7,
+        "General Break": 7,
+        "Break Character": 5,
+        "Slur": 3,
+        "Incorrect Information": 3
+      },
+      "next_nodes": {
+        "Escalation": 20,
+        "Setup": 12,
+        "Goal Execution": 6,
+        "Attack Construction": 5
+      },
+      "success_next_nodes": {
+        "Escalation": 6,
+        "Setup": 4,
+        "Attack Construction": 3,
+        "Goal Execution": 1
+      },
+      "example_conversation_ids": [
+        "2231",
+        "1390",
+        "2255",
+        "1447",
+        "2491"
+      ],
+      "examples": [
+        {
+          "conversation_id": "2231",
+          "attempt_type": [
+            "Slur"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 7,
+          "target_phrase_index": 8,
+          "source_turns": "T22-T22",
+          "target_turns": "T24-T24"
+        },
+        {
+          "conversation_id": "1390",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T6-T6",
+          "target_turns": "T8-T8"
+        },
+        {
+          "conversation_id": "2255",
+          "attempt_type": [
+            "General Break"
+          ],
+          "severity": "1 - Minor",
+          "primary_attack_vector": "Overwhelming",
+          "source_phrase_index": 3,
+          "target_phrase_index": 4,
+          "source_turns": "T8-T8",
+          "target_turns": "T10-T10"
+        },
+        {
+          "conversation_id": "1447",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "1 - Minor",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 1,
+          "target_phrase_index": 3,
+          "source_turns": "T2-T2",
+          "target_turns": "T6-T10"
+        },
+        {
+          "conversation_id": "2491",
+          "attempt_type": [
+            "Inappropriate Topics"
+          ],
+          "severity": "1 - Minor",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 5,
+          "target_phrase_index": 6,
+          "source_turns": "T14-T16",
+          "target_turns": "T18-T18"
+        }
+      ]
+    },
+    {
+      "source": "Trust Building",
+      "target": "Setup",
+      "transition": "Trust Building -> Setup",
+      "transition_count": 86,
+      "success_transition_count": 11,
+      "failure_transition_count": 75,
+      "conversation_count": 69,
+      "success_count": 10,
+      "failure_count": 59,
+      "success_rate": 0.144928,
+      "success_lift": -0.000504,
+      "attempt_targets": {
+        "Inappropriate Topics": 4,
+        "Break Character": 2,
+        "Incorrect Information": 2,
+        "Swearing": 1,
+        "Slur": 1
+      },
+      "attempt_targets_all_conversations": {
+        "General Break": 19,
+        "Inappropriate Topics": 14,
+        "Unknown": 13,
+        "Incorrect Information": 6,
+        "Swearing": 5,
+        "Break Character": 5,
+        "Slur": 4,
+        "Leak Information": 2,
+        "Political/Social/Bias": 1
+      },
+      "next_nodes": {
+        "Trust Building": 21,
+        "Goal Execution": 20,
+        "Escalation": 11,
+        "Attack Construction": 4
+      },
+      "success_next_nodes": {
+        "Goal Execution": 5,
+        "Attack Construction": 2,
+        "Escalation": 1
+      },
+      "example_conversation_ids": [
+        "2133",
+        "1269",
+        "2494",
+        "1390",
+        "1188"
+      ],
+      "examples": [
+        {
+          "conversation_id": "2133",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "3 - Severe",
+          "primary_attack_vector": "Fake Scenario",
+          "source_phrase_index": 1,
+          "target_phrase_index": 3,
+          "source_turns": "T2-T4",
+          "target_turns": "T10-T14"
+        },
+        {
+          "conversation_id": "1269",
+          "attempt_type": [
+            "Inappropriate Topics"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T4-T6",
+          "target_turns": "T8-T18"
+        },
+        {
+          "conversation_id": "2494",
+          "attempt_type": [
+            "Slur"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T2",
+          "target_turns": "T4-T4"
+        },
+        {
+          "conversation_id": "1390",
+          "attempt_type": [
+            "Break Character"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "RolePlay & Persona Manipulation (input/injection)",
+          "source_phrase_index": 2,
+          "target_phrase_index": 4,
+          "source_turns": "T6-T6",
+          "target_turns": "T10-T10"
+        },
+        {
+          "conversation_id": "1188",
+          "attempt_type": [
+            "Inappropriate Topics"
+          ],
+          "severity": "1 - Minor",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T2",
+          "target_turns": "T4-T6"
+        }
+      ]
+    },
+    {
+      "source": "Goal Execution",
+      "target": "Trust Building",
+      "transition": "Goal Execution -> Trust Building",
+      "transition_count": 64,
+      "success_transition_count": 10,
+      "failure_transition_count": 54,
+      "conversation_count": 54,
+      "success_count": 8,
+      "failure_count": 46,
+      "success_rate": 0.148148,
+      "success_lift": 0.002717,
+      "attempt_targets": {
+        "Swearing": 5,
+        "Inappropriate Topics": 3
+      },
+      "attempt_targets_all_conversations": {
+        "Inappropriate Topics": 18,
+        "Swearing": 11,
+        "General Break": 9,
+        "Leak Information": 5,
+        "Break Character": 4,
+        "Slur": 2,
+        "Unknown": 2,
+        "Political/Social/Bias": 2,
+        "Incorrect Information": 1
+      },
+      "next_nodes": {
+        "Goal Execution": 23,
+        "Escalation": 12,
+        "Setup": 9,
+        "Attack Construction": 4
+      },
+      "success_next_nodes": {
+        "Goal Execution": 5,
+        "Escalation": 2,
+        "Setup": 1
+      },
+      "example_conversation_ids": [
+        "1154",
+        "1326",
+        "1329",
+        "1426",
+        "1812"
+      ],
+      "examples": [
+        {
+          "conversation_id": "1154",
+          "attempt_type": [
+            "Swearing"
+          ],
+          "severity": "2 - Major",
+          "primary_attack_vector": "Disguised Intent",
+          "source_phrase_index": 1,
+          "target_phrase_index": 3,
+          "source_turns": "T2-T2",
+          "target_turns": "T8-T8"
+        },
+        {
+          "conversation_id": "1326",
+          "attempt_type": [
+            "Inappropriate Topics"
+          ],
+          "severity": "1 - Minor",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T8",
+          "target_turns": "T10-T12"
+        },
+        {
+          "conversation_id": "1329",
+          "attempt_type": [
+            "Swearing"
+          ],
+          "severity": "1 - Minor",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T6",
+          "target_turns": "T8-T8"
+        },
+        {
+          "conversation_id": "1426",
+          "attempt_type": [
+            "Swearing"
+          ],
+          "severity": "1 - Minor",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 2,
+          "target_phrase_index": 3,
+          "source_turns": "T12-T16",
+          "target_turns": "T18-T18"
+        },
+        {
+          "conversation_id": "1812",
+          "attempt_type": [
+            "Swearing"
+          ],
+          "severity": "1 - Minor",
+          "primary_attack_vector": "Text or Format Trick",
+          "source_phrase_index": 1,
+          "target_phrase_index": 2,
+          "source_turns": "T2-T6",
+          "target_turns": "T8-T10"
+        }
+      ]
+    }
+  ]
+}
