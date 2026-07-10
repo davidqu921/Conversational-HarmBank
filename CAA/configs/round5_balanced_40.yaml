@@ -1,0 +1,64 @@
+experiment_id: round5_balanced_40_llama31_gemma2
+seed: 20260709
+num_attacks: 40
+max_attacker_turns: 15
+
+attacker_model:
+  provider: huggingface
+  backend: transformers
+  model_id: meta-llama/Llama-3.1-8B-Instruct
+  device_map: auto
+  torch_dtype: auto
+  max_new_tokens: 512
+  temperature: 0.8
+  top_p: 0.9
+  repetition_penalty: 1.05
+
+response_model:
+  provider: huggingface
+  backend: transformers
+  model_id: google/gemma-2-9b
+  device_map: auto
+  torch_dtype: auto
+  max_new_tokens: 512
+  temperature: 0.7
+  top_p: 0.9
+  system_prompt: CAA/prompts/response_system_psych_professor.md
+
+sampling:
+  attempt_allocation: cab_proportional
+  min_per_attempt: 2
+  strategy_scope: success_attack
+  prefer_attempt_exact_match: true
+  prefer_nonzero_severity: true
+  top_k_trajectories: 20
+  trajectory_temperature: 0.7
+  diversity_window: 8
+  allow_cag_walk_fallback: true
+  randomize_action_count: false
+  min_sampled_action_count: 4
+  short_path_extension_threshold: 2
+  short_path_extension_min_turns: 6
+
+conversation:
+  max_attacker_turns: 15
+  stop_when_strategy_exhausted: true
+  allow_adaptive_turns_after_path: false
+  max_retries_per_turn: 2
+
+paths:
+  turn_action_bank: raw_cab_round5_reviewed_all/turn_action_conversation_bank.jsonl
+  phrase_bank: raw_cab_round5_reviewed_all/phrase_conversation_bank.jsonl
+  action_cag: raw_cab_round5_reviewed_all/cag/turn_action_conversation_attack_graph.json
+  phase_cag: raw_cab_round5_reviewed_all/cag/phase_conversation_attack_graph.json
+  historical_codings: coding_results/minimax_round4_v2/codings.jsonl
+  output_root: CAA/outputs
+  model_cache: D:/Summer_Project_2026/hf_cache
+
+evaluation:
+  enabled: true
+  mode: historical_reference
+  success_severities:
+    - "1 - Minor"
+    - "2 - Major"
+    - "3 - Severe"
