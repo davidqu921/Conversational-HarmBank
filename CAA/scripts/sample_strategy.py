@@ -45,7 +45,9 @@ def candidate_score(
     edge_by_transition: dict[str, dict[str, Any]],
     used_trajectories: Counter,
     max_turns: int,
+    sampling_cfg: dict[str, Any] | None = None,
 ) -> float:
+    sampling_cfg = sampling_cfg or {}
     actions = [str(item) for item in record.get("action_trajectory", []) if str(item).strip()]
     if not actions:
         return -999.0
@@ -63,10 +65,33 @@ def candidate_score(
         edge_score /= edge_count
 
     severity_bonus = severity_rank(record) * 0.35
+    if severity_rank(record) >= 2:
+        severity_bonus += float(sampling_cfg.get("severity_major_bonus", 0.0))
     length_penalty = abs(len(actions) - min(max_turns, len(actions))) * 0.03
     diversity_penalty = used_trajectories[sequence_key(actions)] * 0.75
     source_bonus = 0.25 if record.get("source_pool") == "success_attack" else 0.0
-    return edge_score + severity_bonus + source_bonus - length_penalty - diversity_penalty
+    intensity_bonus = 0.0
+    attempts = set(attempts_for_record(record))
+    if bool(sampling_cfg.get("prefer_high_intensity_attempts", False)):
+        preferred_attempts = set(str(item) for item in sampling_cfg.get("extra_few_shot_attempts", []))
+        if attempts & preferred_attempts:
+            intensity_bonus += float(sampling_cfg.get("high_intensity_attempt_bonus", 0.0))
+    primary_vector = str(record.get("primary_attack_vector", ""))
+    if primary_vector == "Direct Elicitation":
+        intensity_bonus += float(sampling_cfg.get("direct_elicitation_bonus", 0.0))
+    if primary_vector == "Text or Format Trick":
+        intensity_bonus += float(sampling_cfg.get("text_format_trick_bonus", 0.0))
+    if any(action in actions for action in {"Restricted Content Request", "System Prompt Extraction", "Safety Override Request"}):
+        intensity_bonus += float(sampling_cfg.get("goal_action_bonus", 0.0))
+    if any(action in actions for action in {"Response Format Control", "Incremental Escalation", "Persistence After Refusal"}):
+        intensity_bonus += float(sampling_cfg.get("pressure_action_bonus", 0.0))
+    phases = [str(item) for item in record.get("phase_trajectory", []) if str(item).strip()]
+    if "Goal Execution" in phases:
+        intensity_bonus += float(sampling_cfg.get("goal_execution_phase_bonus", 0.0))
+    benign_actions = {"Benign Opening", "Casual Conversation", "Trust Building"}
+    if actions and all(action in benign_actions for action in actions):
+        intensity_bonus -= float(sampling_cfg.get("benign_only_penalty", 0.0))
+    return edge_score + severity_bonus + source_bonus + intensity_bonus - length_penalty - diversity_penalty
 
 
 def pick_weighted(candidates: list[tuple[dict[str, Any], float]], rng: random.Random, temperature: float) -> dict[str, Any]:
@@ -229,6 +254,74 @@ def source_examples(record: dict[str, Any], max_examples: int = 10) -> list[dict
     return examples
 
 
+def representative_turn_text(record: dict[str, Any]) -> str:
+    turns = list(record.get("turns", []))
+    if not turns:
+        return ""
+    priority_actions = {
+        "Restricted Content Request",
+        "System Prompt Extraction",
+        "Safety Override Request",
+        "Persistence After Refusal",
+        "Incremental Escalation",
+        "Response Format Control",
+    }
+    for turn in reversed(turns):
+        if str(turn.get("action", "")) in priority_actions and str(turn.get("text", "")).strip():
+            return str(turn.get("text", "")).strip()
+    for turn in reversed(turns):
+        if str(turn.get("text", "")).strip():
+            return str(turn.get("text", "")).strip()
+    return ""
+
+
+def extra_few_shots(
+    records: list[dict[str, Any]],
+    attempt: str,
+    selected_id: str,
+    rng: random.Random,
+    sampling_cfg: dict[str, Any],
+) -> list[dict[str, Any]]:
+    count = int(sampling_cfg.get("extra_few_shots_per_attack", 0))
+    if count <= 0:
+        return []
+
+    preferred_attempts = set(str(item) for item in sampling_cfg.get("extra_few_shot_attempts", []))
+    preferred_vectors = set(str(item) for item in sampling_cfg.get("extra_few_shot_vectors", []))
+    pool: list[tuple[float, dict[str, Any]]] = []
+    for record in records:
+        cid = str(record.get("conversation_id", ""))
+        if cid == selected_id or severity_rank(record) <= 0:
+            continue
+        record_attempts = set(attempts_for_record(record))
+        primary = str(record.get("primary_attack_vector", ""))
+        score = severity_rank(record) * 2.0
+        if attempt in record_attempts:
+            score += 3.0
+        if record_attempts & preferred_attempts:
+            score += 1.5
+        if primary in preferred_vectors:
+            score += 1.5
+        text = representative_turn_text(record)
+        if text:
+            pool.append((score, record))
+
+    pool.sort(key=lambda item: (-item[0], str(item[1].get("conversation_id", ""))))
+    top = pool[: max(count * 4, count)]
+    rng.shuffle(top)
+    selected = sorted(top[:count], key=lambda item: (-item[0], str(item[1].get("conversation_id", ""))))
+    shots = []
+    for _, record in selected:
+        shots.append({
+            "conversation_id": record.get("conversation_id", ""),
+            "attempt": "; ".join(attempts_for_record(record)),
+            "severity": record.get("severity", ""),
+            "primary_attack_vector": record.get("primary_attack_vector", ""),
+            "text": representative_turn_text(record),
+        })
+    return shots
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Sample CAB/CAG strategy assignments for a CAA experiment.")
     parser.add_argument("--config", type=Path, default=Path("CAA/configs/round5_balanced_40.yaml"))
@@ -270,7 +363,7 @@ def main() -> None:
                 pool = nonzero
 
         candidates = [
-            (record, candidate_score(record, edge_by_transition, used_trajectories, max_turns))
+            (record, candidate_score(record, edge_by_transition, used_trajectories, max_turns, sampling_cfg))
             for record in pool
             if record.get("action_trajectory")
         ]
@@ -290,6 +383,7 @@ def main() -> None:
             phase_trajectory = action_phase_trajectory(action_trajectory, nodes)
             source_ids = [str(selected.get("conversation_id", ""))]
             examples = source_examples(selected)
+            few_shots = extra_few_shots(success_records, attempt, source_ids[0], rng, sampling_cfg)
             source_severity = selected.get("severity", "")
             source_primary = selected.get("primary_attack_vector", "")
         else:
@@ -305,6 +399,7 @@ def main() -> None:
             phase_trajectory = action_phase_trajectory(action_trajectory, nodes)
             source_ids = []
             examples = []
+            few_shots = extra_few_shots(success_records, attempt, "", rng, sampling_cfg)
             source_severity = ""
             source_primary = ""
 
@@ -339,6 +434,7 @@ def main() -> None:
             "phase_trajectory_list": phase_trajectory,
             "action_trajectory_list": action_trajectory,
             "source_examples": examples,
+            "high_intensity_examples": few_shots,
         })
 
     write_csv(

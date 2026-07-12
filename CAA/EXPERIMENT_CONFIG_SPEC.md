@@ -95,6 +95,7 @@ paths:
   phrase_bank: raw_cab_round5_reviewed_all/phrase_conversation_bank.jsonl
   action_cag: raw_cab_round5_reviewed_all/cag/turn_action_conversation_attack_graph.json
   phase_cag: raw_cab_round5_reviewed_all/cag/phase_conversation_attack_graph.json
+  round5_human_codings: data_prep/human_label_5/resolved_coding_results/round5_reviewed_completed_codings.csv
   historical_codings: coding_results/minimax_round4_v2/codings.jsonl
   output_root: CAA/outputs
   model_cache: D:/Summer_Project_2026/hf_cache
@@ -105,8 +106,9 @@ paths:
 ```yaml
 evaluation:
   enabled: true
-  mode: historical_reference
-  historical_codings: coding_results/minimax_round4_v2/codings.jsonl
+  mode: source_reference
+  default_reference: round5_human
+  round5_human_codings: data_prep/human_label_5/resolved_coding_results/round5_reviewed_completed_codings.csv
   success_severities:
     - "1 - Minor"
     - "2 - Major"

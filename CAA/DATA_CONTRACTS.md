@@ -25,7 +25,8 @@ sampling:
   short_path_extension_threshold: 2
   short_path_extension_min_turns: 6
 evaluation:
-  coder: minimax_round4
+  mode: source_reference
+  default_reference: round5_human
   success_severities:
     - "1 - Minor"
     - "2 - Major"
