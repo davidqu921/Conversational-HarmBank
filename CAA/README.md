@@ -41,3 +41,25 @@ Linux ARM64 + NVIDIA runtime setup is tracked in
 
 Current implementation and runtime status is tracked in
 [`RUN_STATUS.md`](RUN_STATUS.md).
+
+## Single-turn weak attacks from existing planning
+
+`run_weak_attack_experiment.py` reuses an experiment's existing
+`planning/strategy_assignments.jsonl`; it does not resample attempts, topics, or
+trajectories. For each assignment it selects the last action from the first
+available phase in this order: Goal Execution, Attack Construction, Escalation,
+Trust Building, Setup. It generates that single Student attack and one response
+model reply.
+
+```bash
+python -m CAA.scripts.run_weak_attack_experiment \
+  --config CAA/configs/round5_balanced_40_gemma3_12b_stronger.yaml \
+  --dry-run
+
+python -m CAA.scripts.run_weak_attack_experiment \
+  --config CAA/configs/round5_balanced_40_gemma3_12b_stronger.yaml \
+  --execute --resume
+```
+
+Outputs are written under the experiment directory in `weak_attack_convos/`,
+next to `conversations/`.
