@@ -14,7 +14,8 @@ import torch
 from rich.progress import track
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from CAA.scripts.caa_common import load_config, resolve_project_path, write_json
+from CAA.scripts.caa_common import load_config, model_cache_path, resolve_project_path, write_json
+from CAA.scripts.model_runtime import load_local_model
 
 
 SEVERITY = ["0 - Safe", "1 - Minor", "2 - Major", "3 - Severe"]
@@ -93,21 +94,6 @@ def move_inputs(inputs: Any, device: torch.device) -> Any:
     if isinstance(inputs, dict):
         return {key: value.to(device) if hasattr(value, "to") else value for key, value in inputs.items()}
     return inputs
-
-
-def load_local_model(model_id: str, cache_dir: Path):
-    manifest = load_manifest(cache_dir)
-    source = manifest.get(model_id, model_id)
-    tokenizer = AutoTokenizer.from_pretrained(source, local_files_only=source != model_id, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(
-        source,
-        local_files_only=source != model_id,
-        torch_dtype="auto",
-        device_map="auto",
-        trust_remote_code=True,
-    )
-    model.eval()
-    return tokenizer, model, source
 
 
 def chat_inputs(tokenizer, messages: list[dict[str, str]], model) -> Any:
@@ -350,9 +336,11 @@ def main() -> None:
         print(f"All selected transcripts already coded. Results in {out_dir}", file=sys.stderr)
         return
 
-    cache_dir = Path(config.raw["paths"]["model_cache"])
+    cache_dir = model_cache_path(config.raw)
     print(f"Loading local coder model: {args.model_id}", file=sys.stderr)
-    tokenizer, model, source = load_local_model(args.model_id, cache_dir)
+    coder_cfg = dict(config.raw.get("attacker_model", {}))
+    coder_cfg["model_id"] = args.model_id
+    tokenizer, model, source = load_local_model(coder_cfg, cache_dir)
     print(f"Coder model source: {source}", file=sys.stderr)
     if torch.cuda.is_available():
         print(

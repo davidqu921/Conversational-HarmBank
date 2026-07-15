@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 import random
 from collections import Counter
 from dataclasses import dataclass
@@ -60,6 +61,15 @@ def resolve_project_path(path: str | Path) -> Path:
     if path.is_absolute():
         return path
     return PROJECT_ROOT / path
+
+
+def model_cache_path(config: dict[str, Any]) -> Path:
+    """Return the HF cache, allowing server-specific overrides without editing YAML."""
+    override = os.getenv("CAA_MODEL_CACHE") or os.getenv("HF_HUB_CACHE")
+    configured = (config.get("paths") or {}).get("model_cache")
+    if not override and not configured:
+        raise ValueError("Set paths.model_cache or CAA_MODEL_CACHE/HF_HUB_CACHE")
+    return Path(os.path.expandvars(os.path.expanduser(str(override or configured))))
 
 
 def load_yaml(path: Path) -> dict[str, Any]:

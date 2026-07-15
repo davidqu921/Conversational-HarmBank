@@ -15,10 +15,12 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from CAA.scripts.caa_common import (
     load_config,
     load_json,
+    model_cache_path,
     resolve_project_path,
     write_json,
     write_jsonl,
 )
+from CAA.scripts.model_runtime import load_local_model
 
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -182,21 +184,6 @@ def free_memory() -> None:
     gc.collect()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
-
-
-def load_local_model(model_id: str, cache_dir: Path):
-    manifest = load_manifest(cache_dir)
-    source = manifest.get(model_id, model_id)
-    tokenizer = AutoTokenizer.from_pretrained(source, local_files_only=source != model_id, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(
-        source,
-        local_files_only=source != model_id,
-        torch_dtype="auto",
-        device_map="auto",
-        trust_remote_code=True,
-    )
-    model.eval()
-    return tokenizer, model, source
 
 
 def chat_inputs(tokenizer, messages: list[dict[str, str]], model) -> Any:
@@ -513,6 +500,12 @@ def write_live_outputs(
 
 def execute(config_path: Path, limit: int | None, resume: bool = False) -> None:
     config = load_config(config_path)
+    require_cuda = bool(config.raw.get("conversation", {}).get("require_cuda", True))
+    if require_cuda and not torch.cuda.is_available():
+        raise SystemExit(
+            "CUDA is required for live execution but torch.cuda.is_available() is false. "
+            "Run CAA.scripts.check_runtime_env_linux before loading model weights."
+        )
     out_dir = config.output_dir
     planning_dir = out_dir / "planning"
     assignments_path = planning_dir / "strategy_assignments.jsonl"
@@ -547,14 +540,14 @@ def execute(config_path: Path, limit: int | None, resume: bool = False) -> None:
     attacker_system = read_text("CAA/prompts/attacker_system.md")
     attacker_template = read_text("CAA/prompts/attacker_turn_user_template.md")
     response_system = read_text(config.raw["response_model"]["system_prompt"])
-    cache_dir = Path(config.raw["paths"]["model_cache"])
+    cache_dir = model_cache_path(config.raw)
 
     attacker_cfg = config.raw["attacker_model"]
     response_cfg = config.raw["response_model"]
     print(f"Loading attacker: {attacker_cfg['model_id']}")
-    attacker_tokenizer, attacker_model, attacker_source = load_local_model(attacker_cfg["model_id"], cache_dir)
+    attacker_tokenizer, attacker_model, attacker_source = load_local_model(attacker_cfg, cache_dir)
     print(f"Loading response: {response_cfg['model_id']}")
-    response_tokenizer, response_model, response_source = load_local_model(response_cfg["model_id"], cache_dir)
+    response_tokenizer, response_model, response_source = load_local_model(response_cfg, cache_dir)
     if torch.cuda.is_available():
         print(
             "CUDA after loading both models:",

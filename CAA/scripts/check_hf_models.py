@@ -11,7 +11,8 @@ import torch
 import yaml
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from CAA.scripts.caa_common import resolve_project_path
+from CAA.scripts.caa_common import model_cache_path, resolve_project_path
+from CAA.scripts.model_runtime import load_local_model, resolve_model_source, runtime_summary
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -73,10 +74,15 @@ def move_inputs(inputs: Any, device: torch.device) -> Any:
 def check_one(
     model_id: str,
     local_path: str | None,
+    model_cfg: dict[str, Any],
     load_model: bool,
     generate: bool,
     max_new_tokens: int,
 ) -> dict[str, Any]:
+    cfg = dict(model_cfg)
+    cfg["model_id"] = model_id
+    if local_path:
+        cfg["local_path"] = local_path
     source = local_path or model_id
     result: dict[str, Any] = {
         "model_id": model_id,
@@ -87,20 +93,17 @@ def check_one(
         "error": None,
     }
     try:
-        tokenizer = AutoTokenizer.from_pretrained(source, local_files_only=bool(local_path), trust_remote_code=True)
+        source, is_local = resolve_model_source(cfg, Path(cfg.pop("_cache_path")))
+        result["source"] = source
+        tokenizer = AutoTokenizer.from_pretrained(source, local_files_only=is_local, trust_remote_code=True)
         result["tokenizer_ok"] = True
         result["vocab_size"] = len(tokenizer)
         if not load_model:
             return result
 
         start = time.time()
-        model = AutoModelForCausalLM.from_pretrained(
-            source,
-            local_files_only=bool(local_path),
-            torch_dtype="auto",
-            device_map="auto",
-            trust_remote_code=True,
-        )
+        tokenizer, model, source = load_local_model(cfg, Path(model_cfg["_cache_path"]))
+        result["source"] = source
         result["model_ok"] = True
         result["load_s"] = round(time.time() - start, 2)
         result["device_map"] = getattr(model, "hf_device_map", None)
@@ -163,7 +166,7 @@ def main() -> None:
     args = parser.parse_args()
 
     config = load_yaml(resolve_project_path(args.config))
-    cache_dir = Path(config["paths"]["model_cache"])
+    cache_dir = model_cache_path(config)
     manifest = load_manifest(cache_dir)
     models = [
         config["attacker_model"]["model_id"],
@@ -172,13 +175,17 @@ def main() -> None:
     if args.model_id:
         models = [args.model_id]
 
-    print(f"torch={torch.__version__} cuda={torch.cuda.is_available()} device={torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'none'}")
+    print(json.dumps(runtime_summary(), ensure_ascii=False))
     results = []
     for model_id in models:
         print(f"Checking {model_id}")
         result = check_one(
             model_id=model_id,
             local_path=manifest.get(model_id),
+            model_cfg={
+                **next((config[key] for key in ("attacker_model", "response_model") if config[key]["model_id"] == model_id), {}),
+                "_cache_path": str(cache_dir),
+            },
             load_model=args.load_model,
             generate=args.generate,
             max_new_tokens=args.max_new_tokens,

@@ -81,6 +81,7 @@ attempt-appropriate Goal Execution pressure actions.
 ```yaml
 conversation:
   max_attacker_turns: 15
+  require_cuda: true
   stop_when_strategy_exhausted: true
   allow_adaptive_turns_after_path: false
   max_retries_per_turn: 2

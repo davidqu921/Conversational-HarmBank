@@ -36,5 +36,8 @@ Important unresolved decisions are tracked in
 Windows Conda runtime setup is tracked in
 [`SETUP_WINDOWS_CONDA.md`](SETUP_WINDOWS_CONDA.md).
 
+Linux ARM64 + NVIDIA runtime setup is tracked in
+[`SETUP_LINUX_ARM64.md`](SETUP_LINUX_ARM64.md).
+
 Current implementation and runtime status is tracked in
 [`RUN_STATUS.md`](RUN_STATUS.md).
