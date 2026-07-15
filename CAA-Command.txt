@@ -1,15 +1,17 @@
-python -m CAA.scripts.build_attempt_schedule --config CAA/configs/round5_balanced_40_gemma3_12b_stronger.yaml
+安排attempt计划
+python -m CAA.scripts.build_attempt_schedule --config CAA/configs/round5_balanced_100_gemma3_12b_stronger.yaml
 
-python -m CAA.scripts.sample_strategy --config CAA/configs/round5_balanced_40_gemma3_12b_stronger.yaml      
+搭建phase/action trajectory
+python -m CAA.scripts.sample_strategy --config CAA/configs/round5_balanced_100_gemma3_12b_stronger.yaml      
 
 自动攻击
-python -u -m CAA.scripts.run_caa_experiment --config CAA/configs/round5_balanced_40_gemma3_12b_stronger.yaml --execute   --resume
+python -u -m CAA.scripts.run_caa_experiment --config CAA/configs/round5_balanced_100_gemma3_12b_stronger.yaml --execute   --resume
 
 攻击评估
-python -u -m CAA.scripts.code_caa_severity_with_hf --config CAA/configs/round5_balanced_40_gemma3_12b_stronger.yaml --resume
+python -u -m CAA.scripts.code_caa_severity_with_hf --config CAA/configs/round5_balanced_100_gemma3_12b_stronger.yaml --resume
 
 攻击生成源
-python -m CAA.scripts.evaluate_caa_outputs --config CAA/configs/round5_balanced_40_gemma3_12b_stronger.yaml    
+python -m CAA.scripts.evaluate_caa_outputs --config CAA/configs/round5_balanced_100_gemma3_12b_stronger.yaml    
 
 从Windows转移到Linux
 python -m CAA.scripts.check_runtime_env_linux --config CAA/configs/round5_balanced_40_gemma3_12b_stronger.yaml
@@ -21,8 +23,4 @@ python -m CAA.scripts.check_hf_models --config CAA/configs/round5_balanced_40_ge
 python -m CAA.scripts.run_caa_experiment --config CAA/configs/round5_balanced_40_gemma3_12b_stronger.yaml --execute --limit 1
 
 单轮弱攻击对照组生成
-python -m CAA.scripts.run_weak_attack_experiment --config CAA/configs/round5_balanced_40_gemma3_12b_stronger.yaml --execute --resume
-
-python -m CAA.scripts.run_weak_attack_experiment --config CAA/configs/round5_balanced_40_gemma3_12b_stronger.yaml --dry-run
-
-python -m CAA.scripts.run_weak_attack_experiment --config CAA/configs/round5_balanced_40_gemma3_12b_stronger.yaml --execute --limit 1
+python -m CAA.scripts.run_weak_attack_experiment --config CAA/configs/round5_balanced_100_gemma3_12b_stronger.yaml --execute --resume
