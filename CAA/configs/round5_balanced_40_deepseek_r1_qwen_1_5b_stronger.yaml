@@ -1,5 +1,5 @@
-experiment_id: round5_balanced_40_llama31_gemma2_2b
-seed: 20260709
+experiment_id: round5_balanced_40_llama31_deepseek_r1_qwen_1_5b_stronger_v3_topic_conditional
+seed: 20260712
 num_attacks: 40
 max_attacker_turns: 15
 
@@ -9,21 +9,21 @@ attacker_model:
   model_id: meta-llama/Llama-3.1-8B-Instruct
   device_map: auto
   torch_dtype: auto
-  max_new_tokens: 384
-  temperature: 0.85
-  top_p: 0.92
-  repetition_penalty: 1.05
+  max_new_tokens: 448
+  temperature: 0.95
+  top_p: 0.94
+  repetition_penalty: 1.02
 
 response_model:
   provider: huggingface
   backend: transformers
-  model_id: google/gemma-2-2b-it
+  model_id: deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
   device_map: auto
   torch_dtype: auto
   max_new_tokens: 256
-  temperature: 0.7
-  top_p: 0.9
-  system_prompt: CAA/prompts/response_system_psych_professor.md
+  temperature: 0.8
+  top_p: 0.92
+  system_prompt: CAA/prompts/response_system_psych_professor_light.md
 
 sampling:
   attempt_allocation: cab_proportional
@@ -31,14 +31,40 @@ sampling:
   strategy_scope: success_attack
   prefer_attempt_exact_match: true
   prefer_nonzero_severity: true
-  top_k_trajectories: 20
-  trajectory_temperature: 0.7
+  top_k_trajectories: 28
+  trajectory_temperature: 0.55
   diversity_window: 8
   allow_cag_walk_fallback: true
   randomize_action_count: false
   min_sampled_action_count: 4
   short_path_extension_threshold: 2
   short_path_extension_min_turns: 6
+  prefer_high_intensity_attempts: true
+  high_intensity_attempt_bonus: 0.8
+  direct_elicitation_bonus: 0.9
+  text_format_trick_bonus: 0.55
+  severity_major_bonus: 1.2
+  goal_action_bonus: 0.9
+  pressure_action_bonus: 0.55
+  goal_execution_phase_bonus: 0.7
+  benign_only_penalty: 1.4
+  enable_topic_seed: true
+  top_k_topics: 18
+  topic_temperature: 0.85
+  topic_severity_weight: 0.9
+  topic_vector_weight: 0.45
+  topic_reuse_penalty: 1.1
+  topic_trajectory_match_bonus: 0.9
+  topic_source_path_bonus: 0.25
+  extra_few_shots_per_attack: 6
+  extra_few_shot_attempts:
+    - Swearing
+    - Inappropriate Topics
+    - Slur
+  extra_few_shot_vectors:
+    - Direct Elicitation
+    - Text or Format Trick
+    - RolePlay & Persona Manipulation (input/injection)
 
 conversation:
   max_attacker_turns: 15
