@@ -20,6 +20,59 @@ cd projects-cair-governance-jailbreak-coding
 > CAA intentionally generates adversarial and potentially harmful text. Use it
 > only for authorized safety research in a controlled environment.
 
+## Quick start: one config, one command
+
+After creating and activating the Windows `caa` Conda environment, create or
+copy one experiment YAML containing your model, sampling, path, and evaluation
+settings. Then open **Git Bash** and run:
+
+```bash
+bash CAA/scripts/run_full_pipeline.sh \
+  --config CAA/configs/your_experiment.yaml
+```
+
+The wrapper prints timestamped `START`, `DONE`, failure, elapsed-time, and final
+output messages while the underlying Python programs display conversation and
+evaluation progress. It performs, in order:
+
+```text
+HF model download/cache check
+  -> attempt schedule
+  -> strategy sampling
+  -> multi-turn attack
+  -> multi-turn severity evaluation
+  -> source-strategy reference summary
+  -> simple one-turn attack
+  -> simple-attack severity evaluation
+```
+
+Completed model calls and evaluations use `--resume`, so an interrupted run can
+normally be continued by repeating the same command with the unchanged config.
+Useful variants:
+
+```bash
+# Fast end-to-end smoke test
+bash CAA/scripts/run_full_pipeline.sh \
+  --config CAA/configs/your_experiment.yaml \
+  --limit 2
+
+# Planning and prompt rendering only; no model execution/evaluation
+bash CAA/scripts/run_full_pipeline.sh \
+  --config CAA/configs/your_experiment.yaml \
+  --dry-run \
+  --limit 2
+
+# Models are already present in the configured hf_cache
+bash CAA/scripts/run_full_pipeline.sh \
+  --config CAA/configs/your_experiment.yaml \
+  --skip-download
+```
+
+Run `bash CAA/scripts/run_full_pipeline.sh --help` for all options. Do not change
+the YAML, prompts, or frozen planning outputs and then resume the same
+experiment ID; create a new config and `experiment_id` instead. LLM evaluation
+remains provisional and still requires human calibration before publication.
+
 ## Pipeline
 
 ```text
@@ -54,6 +107,7 @@ Do not combine CAB, CAG, and labels from different review rounds.
 | `prompts/response_system_psych_professor*.md` | Full and light psychology-professor response personas. |
 | `prompts/caa_severity_*.md` | Local severity-evaluator prompts. |
 | `scripts/` | Planning, model management, experiment, baseline, and evaluation entry points. |
+| `scripts/run_full_pipeline.sh` | Windows Git Bash wrapper for the complete prepare, run, baseline, and evaluation workflow from one YAML. |
 | `outputs/<experiment_id>/` | One run’s frozen planning, conversations, transcripts, events, and evaluations. |
 | `requirements-transformers.txt` | Transformers dependencies for the Windows runtime documented in this branch. |
 | `requirements-vllm.txt` | Earlier optional vLLM dependency list; Linux users should follow the `dgx-spark` branch instead. |
@@ -316,6 +370,7 @@ errors. See `DATA_CONTRACTS.md`.
 | `setup_windows_conda.ps1` | Build/configure the Windows Conda Transformers environment. |
 | `check_runtime_env.ps1` | Print Python, PyTorch, CUDA, GPU, and HF-environment diagnostics. |
 | `setup_wsl_vllm.sh` | Earlier WSL/vLLM helper retained here; use the `dgx-spark` branch for the supported Linux workflow. |
+| `run_full_pipeline.sh` | Orchestrate the full Windows CAA pipeline from one config, with stage progress, elapsed time, resume, smoke-test, and dry-run options. |
 
 ## Operating notes
 

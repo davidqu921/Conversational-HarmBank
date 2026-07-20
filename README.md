@@ -35,7 +35,13 @@ Raw transcripts + human coding
 ```
 
 Human review is a required quality gate. Raw LLM coding and unreviewed
-segmentation are not final research labels.
+segmentation are not final research labels. For this reason, Part 1 is
+intentionally documented as a staged workflow rather than an unattended
+one-command pipeline: multiple points require independent review, disagreement
+resolution, adjudication, and an explicit decision to freeze the accepted
+artifact before the next stage. Automating across those gates would silently
+turn provisional model output into research ground truth. CAA can be wrapped
+end to end after those reviewed upstream artifacts have been frozen.
 
 ## Repository map
 
@@ -47,7 +53,6 @@ segmentation are not final research labels.
 | `coding_results/` | LLM coding runs and raw provider responses. |
 | `human_irr/`, `evaluation/` | Human–human and LLM–human agreement outputs. |
 | `conversation_seg/` | Conversation Action Library (CAL), segmentation prompts/schema, numbered transcripts, results, and review artifacts. |
-| `raw_cab/`, `raw_cab_round4/` | Earlier CAB/CAG and category-pool artifacts retained for provenance. |
 | `raw_cab_round5_reviewed_all/` | Canonical reviewed phrase/turn-action CABs, statistics, CAGs, and ID pools used by CAA. |
 | `scripts/` | Executable modules, grouped by pipeline stage. |
 | `CAA/` | Independent local-model attack generation, baseline, evaluation, and analysis pipeline. |
