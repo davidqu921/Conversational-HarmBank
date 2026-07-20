@@ -1,0 +1,20 @@
+# 1. Build Attempt Schedule
+python -m CAA.scripts.build_attempt_schedule --config CAA/configs/round5_balanced_300_llama31_8b_stronger.yaml
+
+# 2. Plan Phase&Action Trajectory
+python -m CAA.scripts.sample_strategy --config CAA/configs/round5_balanced_300_llama31_8b_stronger.yaml      
+
+# 3. Start CAA Trajectory Attacking
+python -u -m CAA.scripts.run_caa_experiment --config CAA/configs/round5_balanced_300_llama31_8b_stronger.yaml --execute --resume
+
+# 4. Trajectory Attacking Auto-Evaluation
+python -u -m CAA.scripts.code_caa_severity_with_hf --config CAA/configs/round5_balanced_300_llama31_8b_stronger.yaml --resume
+
+# 5. View the Attacking Scource
+python -m CAA.scripts.evaluate_caa_outputs --config CAA/configs/round5_balanced_100_gemma3_12b_stronger.yaml    
+
+# 6. Start CAA Simple Attacking
+python -m CAA.scripts.run_weak_attack_experiment --config CAA/configs/round5_balanced_300_llama31_8b_stronger.yaml --execute --resume
+
+# 7. Simple Attacking Auto-Evaluation
+python -u -m CAA.scripts.code_caa_severity_with_hf --config CAA/configs/round5_balanced_300_llama31_8b_stronger.yaml --transcripts CAA/outputs/round5_balanced_300_llama31_llama31_8b_stronger_v3_topic_conditional/weak_attack_convos/transcripts.jsonl --out-dir CAA/outputs/round5_balanced_300_llama31_llama31_8b_stronger_v3_topic_conditional/weak_attack_evaluation/severity_llama31 --model-id meta-llama/Llama-3.1-8B-Instruct --resume  
