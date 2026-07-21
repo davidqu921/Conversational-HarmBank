@@ -1,59 +1,37 @@
 # Scripts
 
-Project scripts are grouped by task:
+Run Python entry points as modules from the repository root. The canonical
+publication flow is documented in [`../preprocessing/README.md`](../preprocessing/README.md).
 
-- `data_prep/`: raw transcript preparation and cleaning.
-- `coding/`: whole-conversation jailbreak coding with LLMs.
-- `segmentation/`: turn-level conversation segmentation and review helpers.
-- `cab/`: Conversation Attack Bank construction and CAB statistics.
-- `cag/`: Conversation Attack Graph construction for downstream CAA.
-- `evaluation/`: human/LLM coding agreement and report comparison.
+## Active Round 5 pipeline
 
-Run scripts from the repository root with `python -m`, for example:
+| Package | Purpose |
+| --- | --- |
+| `preprocessing/` | One-config post-review build, category assignment, CAA contract validation, and provenance manifest. |
+| `data_prep/` | Transcript normalization plus human-review template preparation, normalization, and checks. |
+| `coding/` | Current whole-conversation Round 4 LLM coding. |
+| `segmentation/` | Turn numbering and phase/action segmentation. |
+| `fill_back_turn_actions/` | Successful-attack action fill-back and coverage repair audit. |
+| `new_cab/` | Round 5 phrase/turn CAB, statistics, and phase/action CAG implementation called by the publication runner. |
+| `evaluation/` | Human/LLM agreement and discrepancy reports. |
 
-```bash
-python -m scripts.segmentation.segment_conversations_with_minimax --seg-success-attack
-python -m scripts.cab.build_conversation_attack_bank
-python -m scripts.cab.compute_cab_stats
-python -m scripts.cag.build_conversation_attack_graph
-python -m scripts.cag.visualize_cag_networkx --min-count 8 --out raw_cab/cag/cag_v1_networkx_phase.png --no-show
-python -m scripts.coding.code_conversations_round3_with_minimax --ids-from-round3 "data_prep/human_label_3/Round 3 - Jailbreak (new) - Arina.csv" --limit 10 --out-dir coding_results/minimax_round3
-python -m scripts.coding.code_conversations_round4_with_minimax --transcripts data_prep/clean_transcript.jsonl --out-dir coding_results/minimax_round4_clean_transcript
-python -m scripts.evaluation.evaluate_round3 --human-a "data_prep/human_label_3/VirtualSteve Coding - Round 3 - Jailbreak (new) - Arina.csv" --human-b "data_prep/human_label_3/VirtualSteve Coding - Round 3 - Jailbreak (new) - David.csv" --max-conversations 10 --out-dir human_irr/arina_vs_david_first10
+Canonical read-only handoff check:
+
+```powershell
+python -m scripts.preprocessing.run_publication_pipeline --validate-only
 ```
 
-Round 3 coding uses the simplified codebook with no subtype hierarchy. It writes
-new outputs under `coding_results/minimax_round3/` by default and does not modify
-the earlier coding results.
+Canonical deterministic rebuild after human review is frozen:
 
-Round 4 coding uses primary/secondary attack-vector fields, single-label
-attempt/conversational/severity fields, and no success field. To inspect prompts
-before making API calls:
-
-```bash
-python -m scripts.coding.code_conversations_round4_with_minimax --transcripts data_prep/clean_transcript.jsonl --limit 2 --out-dir coding_results/minimax_round4_clean_transcript --dry-run
+```powershell
+python -m scripts.preprocessing.run_publication_pipeline --build --dry-run
+python -m scripts.preprocessing.run_publication_pipeline --build
 ```
 
-To code all 777 conversations in `data_prep/clean_transcript.jsonl`:
+## Historical implementations
 
-```bash
-python -m scripts.coding.code_conversations_round4_with_minimax --transcripts data_prep/clean_transcript.jsonl --out-dir coding_results/minimax_round4_clean_transcript
-```
-
-If the full run is interrupted, resume without re-coding completed successful
-rows:
-
-```bash
-python -m scripts.coding.code_conversations_round4_with_minimax --transcripts data_prep/clean_transcript.jsonl --out-dir coding_results/minimax_round4_clean_transcript --resume
-```
-
-The CAG builder writes:
-
-- `raw_cab/cag/conversation_attack_graph.json`: canonical program-facing graph.
-- `raw_cab/cag/cag_v1_edges.csv`: flat edge list for inspection and graph tooling.
-- `raw_cab/cag/cag_v1.graphml`: visualization/network-analysis graph file.
-- `raw_cab/cag/cag_v1.gexf`: Gephi-friendly visualization graph file.
-
-The quick NetworkX viewer defaults to a phase-column layout to reduce overlap.
-Use `--layout spring` for a force-directed view, `--min-count` to filter weak
-edges, and `--success-only` to weight/filter edges by successful transitions.
+`cab/` and `cag/` implement the earlier CAB/CAG format. Earlier label rounds,
+earlier result directories, and their reports remain for provenance. They are
+not used by the Round 5 publication runner or by current CAA configurations.
+Do not combine artifacts from different rounds without an explicit taxonomy and
+review mapping.

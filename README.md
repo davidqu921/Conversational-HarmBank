@@ -34,6 +34,11 @@ Raw transcripts + human coding
   -> CAA trajectory generation, attacks, evaluation, and analysis
 ```
 
+The publication-facing Part 1 entry point is
+[`preprocessing/README.md`](preprocessing/README.md). It separates the human
+quality gates from a deterministic, one-config post-review build and provides an
+executable validator for every artifact consumed by CAA.
+
 Human review is a required quality gate. Raw LLM coding and unreviewed
 segmentation are not final research labels. For this reason, Part 1 is
 intentionally documented as a staged workflow rather than an unattended
@@ -47,6 +52,7 @@ end to end after those reviewed upstream artifacts have been frozen.
 
 | Path | Purpose |
 | --- | --- |
+| `preprocessing/` | Canonical Round 5 configuration, Part 1 data contracts, reproducible post-review build, and CAA handoff validation. |
 | `data_prep/` | Normalized transcripts, tabular codebooks, five rounds of human labels, and review templates/results. |
 | `prompts/` | Whole-conversation coding prompts and few-shot examples. |
 | `references/` | Model-facing codebooks, methodology, and round-specific output schemas. |
@@ -115,6 +121,11 @@ Earlier rounds are retained for provenance. Do not mix rounds without an
 explicit taxonomy mapping.
 
 ## Part 1: canonical run order
+
+For paper reproduction, use the staged instructions below for data creation and
+human review, then use the configured publication runner in step 8. Detailed
+contracts and the legacy/current boundary are in
+[`preprocessing/README.md`](preprocessing/README.md).
 
 ### 1. Prepare and clean data
 
@@ -236,16 +247,22 @@ Review audit/manual reports before using repaired records.
 ### 8. Build final CAB, statistics, and CAG
 
 ```powershell
-python -m scripts.new_cab.run_phase_phrase_pipeline
-python -m scripts.new_cab.run_turn_action_pipeline
-python -m scripts.new_cab.build_round5_cag
+# Read-only check of the artifacts currently handed to CAA
+python -m scripts.preprocessing.run_publication_pipeline --validate-only
+
+# Inspect, then run, the deterministic post-review rebuild
+python -m scripts.preprocessing.run_publication_pipeline --build --dry-run
+python -m scripts.preprocessing.run_publication_pipeline --build
 ```
 
 The final folder contains `phrase_conversation_bank.jsonl`,
 `turn_action_conversation_bank.jsonl`, statistics, and canonical
 `cag/phase_conversation_attack_graph.json` and
-`cag/turn_action_conversation_attack_graph.json`. Rebuild all downstream
-artifacts after any human-review correction.
+`cag/turn_action_conversation_attack_graph.json`. A successful build also writes
+`artifact_manifest.json` with the Git commit and input/output SHA-256 hashes.
+The runner exits nonzero rather than publishing unresolved turn coverage,
+schema errors, or cross-file ID mismatches. Rebuild all downstream artifacts
+after any human-review correction.
 
 ## Complete script reference
 
@@ -253,6 +270,9 @@ Invoke modules with `python -m` from the repository root.
 
 | Module | Purpose |
 | --- | --- |
+| `scripts.preprocessing.run_publication_pipeline` | Canonical configured Round 5 rebuild, validation, and provenance manifest. |
+| `scripts.preprocessing.validate_caa_inputs` | Read-only executable contract for the Part 1 -> CAA handoff. |
+| `scripts.preprocessing.build_category_assignments` | Build reviewed source pools from frozen labels and cleaned transcript IDs. |
 | `scripts.data_prep.prepare_data` | Convert original transcript CSV and coding XLSX into normalized project inputs. |
 | `scripts.data_prep.clean_transcript` | Remove conversations with `n_turns <= 1`. |
 | `scripts.data_prep.turn_count_stats` | Report transcript/segmentation turn distributions. |
@@ -277,7 +297,6 @@ Invoke modules with `python -m` from the repository root.
 | `scripts.cab.compute_cab_stats` | Compute earlier CAB distributions, transitions, n-grams, and success stats. |
 | `scripts.cag.build_conversation_attack_graph` | Build earlier CAG JSON/CSV/GraphML/GEXF exports. |
 | `scripts.cag.visualize_cag_networkx` | Render earlier CAG with phase/spring layouts and filters. |
-| `raw_cab/prepare_segmentation_pools.py` | Legacy standalone pool builder. |
 | `scripts.fill_back_turn_actions.fillback_success_turn_actions` | Add missing turn actions to reviewed successful phase records. |
 | `scripts.fill_back_turn_actions.repair_success_fillback_outputs` | Audit/reconstruct fill-back outputs without model calls. |
 | `scripts.new_cab.build_phase_phrase_bank` | Build reviewed phase/phrase CAB. |
@@ -288,11 +307,11 @@ Invoke modules with `python -m` from the repository root.
 | `scripts.new_cab.run_turn_action_pipeline` | Run turn-action build and stats stages. |
 | `scripts.new_cab.build_round5_cag` | Build final phase/action CAGs, index, network exports, and figures. |
 
-The tracked legacy entry points `code_conversations.py`,
-`code_conversations_with_minimax.py`, and
-`code_conversations_round3_with_minimax.py` are currently deleted in this
-checkout; restore them only for legacy reproduction or the shared-helper
-dependency described above.
+Earlier `scripts.cab`/`scripts.cag` builders, old label rounds, and earlier
+segmentation outputs are retained for provenance. They are not inputs to the
+configured Round 5 publication build. The active Round 4 coder imports shared
+helpers from `scripts.coding.code_conversations_with_minimax`; that helper is
+therefore active support code even though its standalone workflow is legacy.
 
 ## Reproducibility and publication checklist
 
