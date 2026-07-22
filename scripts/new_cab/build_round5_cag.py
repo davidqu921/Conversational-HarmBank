@@ -59,6 +59,16 @@ def write_csv(path: Path, rows: list[dict[str, Any]], fieldnames: list[str]) -> 
         writer.writerows(rows)
 
 
+def display_source_path(path: Path) -> str:
+    """Use a repo-relative POSIX path when possible, otherwise keep absolute."""
+    if not path.is_absolute():
+        return path.as_posix()
+    try:
+        return path.relative_to(PROJECT_ROOT).as_posix()
+    except ValueError:
+        return str(path)
+
+
 def is_success(record: dict[str, Any]) -> bool:
     return record.get("source_pool") == "success_attack"
 
@@ -599,8 +609,8 @@ def main() -> None:
     write_json(args.out_dir / "conversation_attack_graph.json", {
         "graph_id": "round5_multilayer_cag",
         "metadata": {
-            "source_phase_bank": str(args.phase_bank.relative_to(PROJECT_ROOT) if args.phase_bank.is_absolute() else args.phase_bank),
-            "source_turn_action_bank": str(args.action_bank.relative_to(PROJECT_ROOT) if args.action_bank.is_absolute() else args.action_bank),
+            "source_phase_bank": display_source_path(args.phase_bank),
+            "source_turn_action_bank": display_source_path(args.action_bank),
             "recommended_use": "Use phase_graph for macro attack trajectory planning and turn_action_graph for tactical action selection.",
         },
         "phase_graph": phase_graph,
