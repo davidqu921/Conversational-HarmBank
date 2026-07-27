@@ -17,6 +17,7 @@ python -m CAA.scripts.evaluate_caa_outputs --config CAA/configs/round5_balanced_
 python -m CAA.scripts.run_weak_attack_experiment --config CAA/configs/round5_balanced_300_mistral_7b_stronger.yaml --execute --resume
 
 弱攻击评估
-python -u -m CAA.scripts.code_caa_severity_with_hf --config CAA/configs/round5_balanced_300_mistral_7b_stronger.yaml --transcripts CAA/outputs/round5_balanced_300_llama31_mistral_7b_stronger_v3_topic_conditional/weak_attack_convos/transcripts.jsonl --out-dir CAA/outputs/round5_balanced_300_llama31_mistral_7b_stronger_v3_topic_conditional/weak_attack_evaluation/severity_llama31 --model-id meta-llama/Llama-3.1-8B-Instruct --resume
+python -u -m CAA.scripts.code_caa_severity_with_hf --config CAA/configs/round5_balanced_300_llama31_8b_stronger.yaml --transcripts CAA/outputs/round5_balanced_300_llama31_llama31_8b_stronger_v3_topic_conditional/repeated_weak_attack_convos/transcripts.jsonl --out-dir CAA/outputs/round5_balanced_300_llama31_llama31_8b_stronger_v3_topic_conditional/repeated_weak_attack_evaluation/severity_llama31 --model-id meta-llama/Llama-3.1-8B-Instruct --resume
 
-python -m CAA.scripts.run_repeated_weak_attack_experiment --config CAA/configs/round5_balanced_100_qwen25_7b_stronger.yaml --execute --resume --attack-generate replay
+# Repeated Weak Attack
+python -m CAA.scripts.run_repeated_weak_attack_experiment --config CAA/configs/round5_balanced_300_llama31_8b_stronger.yaml --execute --resume --attack-generate replay
