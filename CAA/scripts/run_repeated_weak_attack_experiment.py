@@ -217,7 +217,7 @@ def dry_run(
                 "source_turn": seed["source_turn"],
             }
         selections.append(selection)
-    output_dir = config.output_dir / "repeated_weak_attack_convos"
+    output_dir = config.output_dir / "trajectory_seeded_repeated_weak_attack_convos"
     write_jsonl(output_dir / "dry_run_selections.jsonl", selections)
     print(
         f"Selected {len(selections)} repeated weak attacks "
@@ -247,7 +247,7 @@ def execute(
     if not assignments_path.exists():
         raise SystemExit(f"Missing planning assignments: {assignments_path}")
     assignments = selected_assignments(load_jsonl(assignments_path), limit, ids)
-    output_dir = config.output_dir / "repeated_weak_attack_convos"
+    output_dir = config.output_dir / "trajectory_seeded_repeated_weak_attack_convos"
     done = completed_ids(output_dir) if resume else set()
     assignments = [row for row in assignments if str(row["attack_id"]) not in done]
     print(
