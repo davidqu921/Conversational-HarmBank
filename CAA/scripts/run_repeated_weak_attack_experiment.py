@@ -37,7 +37,7 @@ from CAA.scripts.run_weak_attack_experiment import (
 )
 
 
-AttackGeneration = Literal["regenerate", "replay"]
+AttackGeneration = Literal["trajectory_seeded", "regenerate", "replay"]
 
 
 def attack_round_count(selected: dict[str, Any], rounds: int | None) -> int:
@@ -75,6 +75,81 @@ def portable_model_config(
             )
             result.pop("local_path", None)
     return result
+
+
+def trajectory_seed_turn(
+    conversations_dir: Path,
+    assignment: dict[str, Any],
+    selected: dict[str, Any],
+) -> dict[str, Any]:
+    """Load the original trajectory turn corresponding to the selected plan action."""
+    attack_id = str(assignment["attack_id"])
+    conversation_path = conversations_dir / f"{attack_id}.json"
+    if not conversation_path.is_file():
+        raise FileNotFoundError(
+            f"{attack_id}: missing source trajectory conversation: {conversation_path}"
+        )
+    conversation = json.loads(conversation_path.read_text(encoding="utf-8"))
+    student_turns = [
+        turn
+        for turn in conversation.get("turns", [])
+        if str(turn.get("speaker", "")).strip().lower() == "student"
+    ]
+    source_index = int(selected["action_index"])
+    selected_action = str(selected["action"])
+    candidate = student_turns[source_index - 1] if source_index <= len(student_turns) else None
+
+    # A terminated or legacy trajectory may not line up one-for-one by ordinal.
+    # In that case, match the same occurrence of the selected action in the plan.
+    if candidate is None or str(candidate.get("planned_action", "")) != selected_action:
+        planned_actions = [
+            str(item) for item in assignment.get("action_trajectory_list", [])
+        ]
+        occurrence = sum(
+            action == selected_action for action in planned_actions[:source_index]
+        )
+        matching_turns = [
+            turn
+            for turn in student_turns
+            if str(turn.get("planned_action", "")) == selected_action
+        ]
+        candidate = (
+            matching_turns[occurrence - 1]
+            if occurrence > 0 and occurrence <= len(matching_turns)
+            else None
+        )
+
+    if candidate is None:
+        raise ValueError(
+            f"{attack_id}: could not find source Student turn for action "
+            f"{selected_action!r} at plan index {source_index} in {conversation_path}"
+        )
+    text = str(candidate.get("text", "")).strip()
+    if not text:
+        raise ValueError(
+            f"{attack_id}: matched source trajectory turn has empty text in "
+            f"{conversation_path}"
+        )
+    attacker_raw = str(candidate.get("attacker_raw", ""))
+    topic = ""
+    if attacker_raw:
+        try:
+            raw_obj = json.loads(attacker_raw)
+            if isinstance(raw_obj, dict):
+                topic = str(raw_obj.get("topic", "")).strip()
+        except json.JSONDecodeError:
+            pass
+    return {
+        "text": text,
+        "source_path": str(conversation_path),
+        "source_turn": candidate.get("turn"),
+        "attacker_raw": attacker_raw,
+        "attacker_rationale": str(candidate.get("attacker_rationale", "")),
+        "attacker_parse_fallback": bool(
+            candidate.get("attacker_parse_fallback", False)
+        ),
+        "topic": topic,
+    }
 
 
 def write_aggregate_outputs(output_dir: Path, attack_generation: AttackGeneration) -> None:
@@ -120,21 +195,28 @@ def dry_run(
         raise SystemExit(f"Missing planning assignments: {assignments_path}")
     assignments = selected_assignments(load_jsonl(assignments_path), limit, ids)
     phases = action_phases(load_json(config.raw["paths"]["action_cag"]))
+    conversations_dir = config.output_dir / "conversations"
     selections = []
     for assignment in assignments:
         selected = select_weak_attack_action(assignment, phases)
         repeat_count = attack_round_count(selected, rounds)
-        selections.append(
-            {
-                "attack_id": assignment["attack_id"],
-                "attempt": assignment["attempt"],
-                "topic_seed": assignment.get("topic_seed", {}),
-                **selected,
-                "source_action_count": selected["action_count"],
-                "repeat_count": repeat_count,
-                "attack_generation": attack_generation,
+        selection = {
+            "attack_id": assignment["attack_id"],
+            "attempt": assignment["attempt"],
+            "topic_seed": assignment.get("topic_seed", {}),
+            **selected,
+            "source_action_count": selected["action_count"],
+            "repeat_count": repeat_count,
+            "attack_generation": attack_generation,
+        }
+        if attack_generation == "trajectory_seeded":
+            seed = trajectory_seed_turn(conversations_dir, assignment, selected)
+            selection["trajectory_seed"] = {
+                "text": seed["text"],
+                "source_path": seed["source_path"],
+                "source_turn": seed["source_turn"],
             }
-        )
+        selections.append(selection)
     output_dir = config.output_dir / "repeated_weak_attack_convos"
     write_jsonl(output_dir / "dry_run_selections.jsonl", selections)
     print(
@@ -176,6 +258,7 @@ def execute(
     action_cag = load_json(config.raw["paths"]["action_cag"])
     descriptions = action_descriptions(action_cag)
     phases = action_phases(action_cag)
+    conversations_dir = config.output_dir / "conversations"
     attacker_system = read_text("CAA/prompts/attacker_system.md")
     attacker_template = read_text("CAA/prompts/attacker_turn_user_template.md")
     response_system = read_text(config.raw["response_model"]["system_prompt"])
@@ -222,10 +305,31 @@ def execute(
         turns: list[dict[str, Any]] = []
         recent_topics: list[str] = []
         first_attack: tuple[str, dict[str, Any]] | None = None
+        seed = (
+            trajectory_seed_turn(conversations_dir, assignment, selected)
+            if attack_generation == "trajectory_seeded"
+            else None
+        )
         started = time.time()
 
         for attack_round in range(1, repeat_count + 1):
-            if attack_generation == "regenerate" or first_attack is None:
+            if attack_generation == "trajectory_seeded" and attack_round == 1:
+                assert seed is not None
+                raw_attack = seed["attacker_raw"]
+                attack_obj = {
+                    "student_message": seed["text"],
+                    "planned_action": selected["action"],
+                    "rationale": seed["attacker_rationale"],
+                    "parse_fallback": seed["attacker_parse_fallback"],
+                    "topic": seed["topic"],
+                }
+                if seed["topic"]:
+                    recent_topics.append(seed["topic"])
+                attack_origin = "trajectory"
+            elif attack_generation == "replay" and first_attack is not None:
+                raw_attack, attack_obj = first_attack
+                attack_origin = "replayed"
+            else:
                 prompt = render_attacker_prompt(
                     system_prompt=attacker_system,
                     user_template=attacker_template,
@@ -254,10 +358,9 @@ def execute(
                 attack_obj = parse_attacker_json(raw_attack, selected["action"])
                 if attack_obj.get("topic"):
                     recent_topics.append(str(attack_obj["topic"]))
-                if first_attack is None:
+                if attack_generation == "replay" and first_attack is None:
                     first_attack = (raw_attack, attack_obj)
-            else:
-                raw_attack, attack_obj = first_attack
+                attack_origin = "generated"
 
             student_text = str(attack_obj.get("student_message", "")).strip()
             if not student_text:
@@ -274,7 +377,14 @@ def execute(
                     "attacker_raw": raw_attack,
                     "attacker_rationale": attack_obj.get("rationale", ""),
                     "attacker_parse_fallback": bool(attack_obj.get("parse_fallback", False)),
+                    "attack_origin": attack_origin,
                     "replayed": attack_generation == "replay" and attack_round > 1,
+                    "trajectory_source_path": (
+                        seed["source_path"] if attack_round == 1 and seed else ""
+                    ),
+                    "trajectory_source_turn": (
+                        seed["source_turn"] if attack_round == 1 and seed else None
+                    ),
                 }
             )
             professor_text = generate_chat(
@@ -305,6 +415,15 @@ def execute(
             "source_action_index": selected["action_index"],
             "source_action_count": selected["action_count"],
             "action_count": repeat_count,
+            "trajectory_seed": (
+                {
+                    "source_path": seed["source_path"],
+                    "source_turn": seed["source_turn"],
+                    "text": seed["text"],
+                }
+                if seed
+                else None
+            ),
             "duration_s": round(time.time() - started, 2),
             "models": {
                 "attacker": attacker_cfg["model_id"],
@@ -368,11 +487,13 @@ def main() -> None:
     )
     parser.add_argument(
         "--attack-generation",
-        choices=("regenerate", "replay"),
-        default="regenerate",
+        choices=("trajectory_seeded", "regenerate", "replay"),
+        default="trajectory_seeded",
         help=(
-            "regenerate creates a context-aware message each round while keeping the action fixed; "
-            "replay repeats the first generated message verbatim"
+            "trajectory_seeded copies the matching original trajectory turn for round 1 "
+            "and generates context-aware variants thereafter; regenerate creates a new "
+            "context-aware message every round; replay generates once and repeats that "
+            "message verbatim"
         ),
     )
     args = parser.parse_args()
