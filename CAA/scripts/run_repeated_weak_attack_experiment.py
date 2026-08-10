@@ -217,7 +217,7 @@ def dry_run(
                 "source_turn": seed["source_turn"],
             }
         selections.append(selection)
-    output_dir = config.output_dir / "trajectory_seeded_repeated_weak_attack_convos"
+    output_dir = config.output_dir / "d_seeded_repeated_weak_attack_convos"
     write_jsonl(output_dir / "dry_run_selections.jsonl", selections)
     print(
         f"Selected {len(selections)} repeated weak attacks "
