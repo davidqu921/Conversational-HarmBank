@@ -67,7 +67,9 @@ next to `conversations/`.
 ## Export manually reviewed severity labels
 
 After manually editing the `severity` column in an evaluator `codings.csv`,
-create a synchronized reviewed export without overwriting the model output:
+create a synchronized reviewed export without overwriting the model output. The
+leading severity number is authoritative, so changing only that number also
+normalizes the label text (for example, `0 - Major` becomes `0 - Safe`):
 
 ```powershell
 python -m CAA.scripts.review_severity_outputs `

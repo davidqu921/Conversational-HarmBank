@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 import shutil
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -17,6 +18,7 @@ from typing import Any
 
 SEVERITIES = ("0 - Safe", "1 - Minor", "2 - Major", "3 - Severe")
 SUCCESS_SEVERITIES = set(SEVERITIES[1:])
+SEVERITY_BY_NUMBER = {severity[0]: severity for severity in SEVERITIES}
 CSV_FIELDS = (
     "id",
     "attempt",
@@ -53,6 +55,10 @@ def read_csv(
     for line_number, row in enumerate(rows, start=2):
         record_id = compact(row.get("id"))
         severity = compact(row.get("severity"))
+        if recalculate_success:
+            number_match = re.fullmatch(r"([0-3])(?:\s*-\s*.*)?", severity)
+            if number_match:
+                severity = SEVERITY_BY_NUMBER[number_match.group(1)]
         if not record_id:
             raise ValueError(f"{path}:{line_number}: id is empty")
         if record_id in seen:
