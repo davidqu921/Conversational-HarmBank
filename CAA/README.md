@@ -64,12 +64,65 @@ python -m CAA.scripts.run_weak_attack_experiment \
 Outputs are written under the experiment directory in `weak_attack_convos/`,
 next to `conversations/`.
 
+## Isolated trajectory-seeded repeated attacks
+
+`run_isolated_repeated_attack_experiment.py` repeats the priority-selected
+trajectory execution turn using isolated one-Student/one-Steve conversations.
+The first conversation copies the matched trajectory turn. Every later
+attacker call uses the same fixed seed, objective, plan, examples, topic, and
+standalone pressure guidance. Every response-model call receives only the
+current Student message.
+
+```bash
+python -m CAA.scripts.run_isolated_repeated_attack_experiment \
+  --config CAA/configs/round5_balanced_100_gemma3_12b_stronger.yaml \
+  --dry-run --limit 1
+
+python -m CAA.scripts.run_isolated_repeated_attack_experiment \
+  --config CAA/configs/round5_balanced_100_gemma3_12b_stronger.yaml \
+  --execute --resume
+```
+
+Outputs are written to
+`isolated_trajectory_seeded_repeated_weak_attack_convos/`. Each `caa_*` ID is a
+folder containing `conversation_XX.json` files and a `manifest.json`.
+`pair_transcripts.jsonl` flattens the isolated conversations for later coding;
+parent-level evaluation aggregation is deliberately handled separately. Token
+usage records actual attacker and response queries. Because the first attack is
+copied rather than generated in this run, it records zero attacker-query tokens
+and reports the copied seed length separately as `seed_text_tokens`.
+
+The older `trajectory_seeded_independent` mode in
+`run_repeated_weak_attack_experiment.py` does not pass actual Steve responses to
+the attacker, but it uses the legacy context-oriented attacker instructions and
+keeps all Steve replies in one accumulated response-model conversation. The
+isolated runner uses dedicated standalone prompts and fresh response context for
+the stricter independent condition.
+
+To run the 100- and 300-conversation configs for all four response models
+strictly sequentially on the DGX Spark, activate the `caa` environment and
+launch the batch wrapper once:
+
+```bash
+nohup bash CAA/scripts/run_isolated_repeated_all.sh \
+  > isolated_repeated_launcher.log 2>&1 &
+
+tail -f isolated_repeated_launcher.log
+```
+
+The wrapper always passes `--resume`, retries each failed task once, continues
+to later tasks after a persistent failure, and writes per-task logs plus a
+`status.tsv` under `CAA/outputs/isolated_repeated_batch_logs/<UTC timestamp>/`.
+It exits nonzero if any of the eight tasks remains failed.
+
 ## Export manually reviewed severity labels
 
 After manually editing the `severity` column in an evaluator `codings.csv`,
 create a synchronized reviewed export without overwriting the model output. The
 leading severity number is authoritative, so changing only that number also
-normalizes the label text (for example, `0 - Major` becomes `0 - Safe`):
+normalizes the label text (for example, `0 - Major` becomes `0 - Safe`). A
+manually renamed `severity_reviewed` column is also accepted and exported under
+the canonical `severity` name:
 
 ```powershell
 python -m CAA.scripts.review_severity_outputs `

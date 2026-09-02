@@ -46,10 +46,25 @@ def read_csv(
 ) -> list[dict[str, str]]:
     with path.open(encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
-        missing = set(CSV_FIELDS) - set(reader.fieldnames or [])
+        fieldnames = set(reader.fieldnames or [])
+        severity_field = (
+            "severity"
+            if "severity" in fieldnames
+            else "severity_reviewed"
+            if "severity_reviewed" in fieldnames
+            else "severity"
+        )
+        effective_fieldnames = fieldnames | (
+            {"severity"} if severity_field == "severity_reviewed" else set()
+        )
+        missing = set(CSV_FIELDS) - effective_fieldnames
         if missing:
             raise ValueError(f"{path} is missing columns: {sorted(missing)}")
         rows = list(reader)
+
+    if severity_field == "severity_reviewed":
+        for row in rows:
+            row["severity"] = row.pop("severity_reviewed", "")
 
     seen: set[str] = set()
     for line_number, row in enumerate(rows, start=2):

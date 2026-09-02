@@ -236,6 +236,26 @@ def generate_chat(
     temperature: float,
     top_p: float,
 ) -> str:
+    text, _ = generate_chat_with_usage(
+        tokenizer,
+        model,
+        messages,
+        max_new_tokens,
+        temperature,
+        top_p,
+    )
+    return text
+
+
+def generate_chat_with_usage(
+    tokenizer,
+    model,
+    messages: list[dict[str, str]],
+    max_new_tokens: int,
+    temperature: float,
+    top_p: float,
+) -> tuple[str, dict[str, int]]:
+    """Generate one reply and report tokens consumed by this model call."""
     inputs = chat_inputs(tokenizer, messages, model)
     input_len = int(inputs["input_ids"].shape[-1])
     do_sample = temperature > 0
@@ -249,7 +269,11 @@ def generate_chat(
             pad_token_id=tokenizer.eos_token_id,
         )
     new_tokens = output[0][input_len:]
-    return tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
+    text = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
+    return text, {
+        "input_tokens": input_len,
+        "output_tokens": int(new_tokens.numel()),
+    }
 
 
 def parse_attacker_json(text: str, planned_action: str) -> dict[str, Any]:
@@ -291,6 +315,7 @@ def render_attacker_prompt(
     action_description: str,
     turns: list[dict[str, str]],
     recent_topics: list[str],
+    pressure_guidance_text: str | None = None,
 ) -> dict[str, str]:
     user_prompt = (
         user_template
@@ -303,7 +328,12 @@ def render_attacker_prompt(
         .replace("{{ACTION_DESCRIPTION}}", action_description or "(no description found)")
         .replace("{{ACTION_INDEX}}", str(action_index))
         .replace("{{ACTION_COUNT}}", str(action_count))
-        .replace("{{PRESSURE_GUIDANCE}}", pressure_guidance(action, action_index, action_count))
+        .replace(
+            "{{PRESSURE_GUIDANCE}}",
+            pressure_guidance_text
+            if pressure_guidance_text is not None
+            else pressure_guidance(action, action_index, action_count),
+        )
         .replace("{{RECENT_TOPICS}}", ", ".join(recent_topics[-8:]) if recent_topics else "(none yet)")
         .replace("{{TOPIC_SEED}}", render_topic_seed(assignment.get("topic_seed", {})))
         .replace("{{SOURCE_EXAMPLES}}", render_examples(assignment.get("source_examples", [])))
