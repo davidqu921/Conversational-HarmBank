@@ -215,8 +215,13 @@ Run the matched single-turn baseline and local severity evaluation:
 python -m CAA.scripts.run_weak_attack_experiment \
   --config "$CONFIG" --execute --resume
 python -m CAA.scripts.code_caa_severity_with_hf \
-  --config "$CONFIG" --resume
+  --config "$CONFIG" --double-layer --resume
 ```
+
+With `--double-layer`, Llama 3.1 performs the first pass and Mistral 7B Instruct
+v0.3 independently adjudicates only positive results. The final files keep the
+same names, while first-layer and supervisor journals are retained for audit and
+resume. Omit `--double-layer` to reproduce the original single-model evaluator.
 
 CAA stores each experiment beneath `CAA/outputs/<experiment_id>/`, including
 frozen planning assignments, per-conversation JSON, transcript JSONL, events,

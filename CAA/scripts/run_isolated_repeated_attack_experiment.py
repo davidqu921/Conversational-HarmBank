@@ -128,7 +128,29 @@ def context_reference_matches(text: str) -> list[str]:
 
 
 def pair_path(parent_dir: Path, index: int) -> Path:
+    return parent_dir / f"pair_{index:02d}.json"
+
+
+def legacy_pair_path(parent_dir: Path, index: int) -> Path:
+    """Path used by the first isolated-runner revision."""
     return parent_dir / f"conversation_{index:02d}.json"
+
+
+def migrate_legacy_pair(
+    legacy: dict[str, Any],
+    output_path: Path,
+    parent_id: str,
+    index: int,
+) -> dict[str, Any]:
+    """Copy a completed legacy pair into the canonical pair ID/file schema."""
+    migrated = {
+        **legacy,
+        "attack_id": parent_id,
+        "conversation_id": f"{parent_id}__pair_{index:02d}",
+        "isolated_conversation_index": index,
+    }
+    write_json(output_path, migrated)
+    return migrated
 
 
 def read_completed_pair(path: Path) -> dict[str, Any] | None:
@@ -207,6 +229,32 @@ def sum_token_usage(pairs: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
     return totals
 
 
+def summarize_standalone_validation(pairs: list[dict[str, Any]]) -> dict[str, Any]:
+    """Summarize advisory standalone checks without filtering attack samples."""
+    checked: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    for pair in pairs:
+        validation = pair.get("standalone_validation") or {}
+        if bool(validation.get("applicable")):
+            checked.append((pair, validation))
+    failed = [item for item in checked if not bool(item[1].get("passed"))]
+    return {
+        "policy": "advisory_warning_only",
+        "n_checked": len(checked),
+        "n_passed": len(checked) - len(failed),
+        "n_failed": len(failed),
+        "failure_rate": round(len(failed) / len(checked), 4) if checked else 0.0,
+        "failed_pairs": [
+            {
+                "id": pair.get("conversation_id", ""),
+                "context_reference_matches": list(
+                    validation.get("context_reference_matches") or []
+                ),
+            }
+            for pair, validation in failed
+        ],
+    }
+
+
 def pair_transcript_record(pair: dict[str, Any]) -> dict[str, Any]:
     child = {**pair, "attack_id": pair["conversation_id"]}
     record = transcript_record_from_conversation(child)
@@ -217,6 +265,9 @@ def pair_transcript_record(pair: dict[str, Any]) -> dict[str, Any]:
             "mode": pair["mode"],
             "attacker_context_policy": pair["attacker_context_policy"],
             "response_context_policy": pair["response_context_policy"],
+            "selected_phase": pair["selected_phase"],
+            "selected_action": pair["selected_action"],
+            "attack_origin": pair["attack_origin"],
             "token_usage": pair["token_usage"],
         }
     )
@@ -261,6 +312,7 @@ def write_aggregate_outputs(output_dir: Path) -> None:
             "n_attack_ids": len(manifests),
             "n_isolated_conversations": len(pairs),
             "token_usage": sum_token_usage(pairs),
+            "standalone_validation": summarize_standalone_validation(pairs),
         },
     )
 
@@ -459,6 +511,20 @@ def execute(
         for index in range(1, repeat_count + 1):
             output_path = pair_path(parent_dir, index)
             existing = read_completed_pair(output_path) if resume else None
+            if existing is None and resume:
+                legacy = read_completed_pair(legacy_pair_path(parent_dir, index))
+                if legacy is not None:
+                    existing = migrate_legacy_pair(
+                        legacy,
+                        output_path,
+                        str(assignment["attack_id"]),
+                        index,
+                    )
+                    print(
+                        f"Migrated legacy isolated pair without regeneration: "
+                        f"{assignment['attack_id']} pair {index}",
+                        flush=True,
+                    )
             if existing is not None:
                 pairs.append(existing)
                 continue
@@ -503,10 +569,19 @@ def execute(
                 context_reference_matches(student_text) if attacker_executed else []
             )
             if context_references:
-                raise RuntimeError(
-                    f"{assignment['attack_id']} conversation {index}: generated "
-                    "message presupposes unavailable response history: "
-                    f"{context_references}"
+                print(
+                    "WARNING standalone_validation "
+                    + json.dumps(
+                        {
+                            "attack_id": assignment["attack_id"],
+                            "pair_index": index,
+                            "passed": False,
+                            "context_reference_matches": context_references,
+                            "action": "recorded_and_continued",
+                        },
+                        ensure_ascii=False,
+                    ),
+                    flush=True,
                 )
 
             response_input = response_messages(
@@ -522,7 +597,7 @@ def execute(
                 top_p=float(response_cfg.get("top_p", 0.9)),
             )
             conversation_id = (
-                f"{assignment['attack_id']}__conversation_{index:02d}"
+                f"{assignment['attack_id']}__pair_{index:02d}"
             )
             usage = token_usage(
                 attacker_usage,
@@ -628,6 +703,7 @@ def execute(
                 for index in range(1, repeat_count + 1)
             ],
             "token_usage": sum_token_usage(pairs),
+            "standalone_validation": summarize_standalone_validation(pairs),
             "duration_s": round(time.time() - parent_started, 2),
         }
         write_json(parent_dir / "manifest.json", manifest)

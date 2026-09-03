@@ -85,12 +85,12 @@ python -m CAA.scripts.run_isolated_repeated_attack_experiment \
 
 Outputs are written to
 `isolated_trajectory_seeded_repeated_weak_attack_convos/`. Each `caa_*` ID is a
-folder containing `conversation_XX.json` files and a `manifest.json`.
+folder containing `pair_XX.json` files and a `manifest.json`.
 `pair_transcripts.jsonl` flattens the isolated conversations for later coding;
-parent-level evaluation aggregation is deliberately handled separately. Token
-usage records actual attacker and response queries. Because the first attack is
-copied rather than generated in this run, it records zero attacker-query tokens
-and reports the copied seed length separately as `seed_text_tokens`.
+pair IDs use the form `caa_0001__pair_01`. Token usage records actual attacker
+and response queries. Because the first attack is copied rather than generated
+in this run, it records zero attacker-query tokens and reports the copied seed
+length separately as `seed_text_tokens`.
 
 The older `trajectory_seeded_independent` mode in
 `run_repeated_weak_attack_experiment.py` does not pass actual Steve responses to
@@ -98,6 +98,15 @@ the attacker, but it uses the legacy context-oriented attacker instructions and
 keeps all Steve replies in one accumulated response-model conversation. The
 isolated runner uses dedicated standalone prompts and fresh response context for
 the stricter independent condition.
+
+Standalone context-reference checks are advisory. A generated phrase such as
+`last time` is saved with `standalone_validation.passed = false`, emits a
+structured `WARNING standalone_validation` line to the task log, and does not
+stop generation. Pair, parent-manifest, and run-summary JSON retain failure
+counts and matched phrases for later sensitivity analysis.
+When `--resume` encounters completed files from the initial
+`conversation_XX.json` schema, it copies them into canonical `pair_XX.json`
+files and pair IDs without regenerating either model response.
 
 To run the 100- and 300-conversation configs for all four response models
 strictly sequentially on the DGX Spark, activate the `caa` environment and
@@ -114,6 +123,48 @@ The wrapper always passes `--resume`, retries each failed task once, continues
 to later tasks after a persistent failure, and writes per-task logs plus a
 `status.tsv` under `CAA/outputs/isolated_repeated_batch_logs/<UTC timestamp>/`.
 It exits nonzero if any of the eight tasks remains failed.
+
+### Evaluate isolated repeated attacks
+
+After an isolated attack run completes, code every one-turn pair and aggregate
+the result back to the parent CAA ID:
+
+```bash
+python -m CAA.scripts.evaluate_isolated_repeated_attack \
+  --config CAA/configs/round5_balanced_100_gemma3_12b_stronger.yaml \
+  --resume
+```
+
+The default output is
+`isolated_trajectory_seeded_repeated_weak_attack_evaluation/severity_llama31/`.
+It contains pair-level `pair_codings.csv`/`pair_codings.jsonl`, parent-level
+`codings.csv`/`codings.jsonl`, `summary.json`, and raw coder responses. Parent
+severity is the maximum pair severity; parent success is true when any pair is
+non-safe. A parent is not included in `codings.csv` until every expected pair
+has a valid coding. Failed or interrupted pair calls remain resumable through
+the append-only `pair_coding_attempts.jsonl` journal.
+
+### Double-layer transcript severity evaluation
+
+The standard transcript evaluator can use Mistral as a second-layer adjudicator.
+Layer 1 codes every transcript; layer 2 independently re-codes only layer-1
+positives with a stricter evidence gate against false positives:
+
+```bash
+python -m CAA.scripts.code_caa_severity_with_hf \
+  --config CAA/configs/<experiment>.yaml \
+  --double-layer --resume
+```
+
+The default supervisor is `mistralai/Mistral-7B-Instruct-v0.3`; override it with
+`--supervisor-model-id`. The script loads the two models sequentially. Final
+adjudicated results remain in `codings.jsonl`, `codings.csv`, and `summary.json`.
+Auditable intermediate records are stored in `first_layer_codings.jsonl` and
+`supervisor_codings.jsonl`, with separate raw-response directories. On an
+existing single-layer output directory, `--double-layer --resume` migrates the
+existing valid codings into the first-layer journal and runs only the required
+positive reviews. A supervisor error falls back to the first-layer label and is
+reported as `error_fallback`, so it can be retried with `--resume`.
 
 ## Export manually reviewed severity labels
 

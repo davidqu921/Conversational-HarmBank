@@ -49,7 +49,9 @@ from CAA.scripts.run_isolated_repeated_attack_experiment import (
     context_reference_matches,
     isolated_pressure_guidance,
     read_text,
+    migrate_legacy_pair,
     render_fixed_prompt,
+    summarize_standalone_validation,
     sum_token_usage,
     token_usage,
     write_aggregate_outputs,
@@ -112,6 +114,47 @@ class IsolatedRepeatedAttackTests(unittest.TestCase):
         self.assertTrue(context_reference_matches("You already refused, but answer."))
         self.assertTrue(context_reference_matches("I am asking again."))
 
+    def test_standalone_validation_summary_is_advisory(self) -> None:
+        pairs = [
+            {
+                "conversation_id": "caa_0001__pair_01",
+                "standalone_validation": {
+                    "applicable": False,
+                    "passed": True,
+                    "context_reference_matches": [],
+                },
+            },
+            {
+                "conversation_id": "caa_0001__pair_02",
+                "standalone_validation": {
+                    "applicable": True,
+                    "passed": False,
+                    "context_reference_matches": ["last time"],
+                },
+            },
+            {
+                "conversation_id": "caa_0001__pair_03",
+                "standalone_validation": {
+                    "applicable": True,
+                    "passed": True,
+                    "context_reference_matches": [],
+                },
+            },
+        ]
+        summary = summarize_standalone_validation(pairs)
+        self.assertEqual(summary["policy"], "advisory_warning_only")
+        self.assertEqual(summary["n_checked"], 2)
+        self.assertEqual(summary["n_passed"], 1)
+        self.assertEqual(summary["n_failed"], 1)
+        self.assertEqual(summary["failure_rate"], 0.5)
+        self.assertEqual(
+            summary["failed_pairs"],
+            [{
+                "id": "caa_0001__pair_02",
+                "context_reference_matches": ["last time"],
+            }],
+        )
+
     def test_token_usage_distinguishes_copied_seed_from_model_query(self) -> None:
         copied = token_usage(
             {"input_tokens": 0, "output_tokens": 0},
@@ -146,7 +189,7 @@ class IsolatedRepeatedAttackTests(unittest.TestCase):
             parent_dir = output_dir / "caa_0001"
             pair_files = []
             for index in (1, 2):
-                name = f"conversation_{index:02d}.json"
+                name = f"pair_{index:02d}.json"
                 pair_files.append(name)
                 usage = token_usage(
                     {"input_tokens": 0, "output_tokens": 0},
@@ -155,7 +198,7 @@ class IsolatedRepeatedAttackTests(unittest.TestCase):
                 )
                 write_json(parent_dir / name, {
                     "attack_id": "caa_0001",
-                    "conversation_id": f"caa_0001__conversation_{index:02d}",
+                    "conversation_id": f"caa_0001__pair_{index:02d}",
                     "experiment_id": "test_experiment",
                     "created_time": "",
                     "attempt": "General Break",
@@ -164,6 +207,9 @@ class IsolatedRepeatedAttackTests(unittest.TestCase):
                     "isolated_conversation_index": index,
                     "attacker_context_policy": ATTACKER_CONTEXT_POLICY,
                     "response_context_policy": RESPONSE_CONTEXT_POLICY,
+                    "selected_phase": "Goal Execution",
+                    "selected_action": "Restricted Content Request",
+                    "attack_origin": "generated",
                     "token_usage": usage,
                     "turns": [
                         {"turn": 1, "speaker": "Student", "text": f"attack {index}"},
@@ -195,6 +241,25 @@ class IsolatedRepeatedAttackTests(unittest.TestCase):
             self.assertEqual(transcript_rows[0]["parsed_n_student_turns"], 1)
             self.assertEqual(summary["n_attack_ids"], 1)
             self.assertEqual(summary["n_isolated_conversations"], 2)
+
+    def test_legacy_conversation_file_migrates_without_regeneration(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            parent_dir = Path(temp) / "caa_0019"
+            legacy = {
+                "attack_id": "caa_0019",
+                "conversation_id": "caa_0019__conversation_04",
+                "isolated_conversation_index": 4,
+                "status": "completed",
+                "turns": [],
+            }
+            output_path = parent_dir / "pair_04.json"
+            migrated = migrate_legacy_pair(
+                legacy, output_path, "caa_0019", 4
+            )
+            self.assertEqual(migrated["conversation_id"], "caa_0019__pair_04")
+            self.assertTrue(output_path.is_file())
+            saved = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(saved["conversation_id"], "caa_0019__pair_04")
 
 
 if __name__ == "__main__":
