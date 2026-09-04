@@ -189,4 +189,4 @@ if (( ${#failures[@]} > 0 )); then
   exit 1
 fi
 
-echo "All ${total} isolated repeated attack tasks completed successfully."
+echo "<==All ${total} isolated repeated attack tasks completed successfully.==>"
