@@ -482,6 +482,14 @@ def main() -> None:
     parser.add_argument("--supervisor-model-id", default=DEFAULT_SUPERVISOR_MODEL)
     parser.add_argument("--supervisor-max-new-tokens", type=int, default=256)
     parser.add_argument(
+        "--rerun-supervisor",
+        action="store_true",
+        help=(
+            "Re-code every first-layer positive and replace the supervisor journal; "
+            "requires --double-layer --resume."
+        ),
+    )
+    parser.add_argument(
         "--supervisor-system-prompt",
         type=Path,
         default=Path("CAA/prompts/caa_severity_supervisor_system.md"),
@@ -492,6 +500,8 @@ def main() -> None:
         default=Path("CAA/prompts/caa_severity_supervisor_user_template.md"),
     )
     args = parser.parse_args()
+    if args.rerun_supervisor and not (args.double_layer and args.resume):
+        parser.error("--rerun-supervisor requires both --double-layer and --resume")
 
     config = load_config(args.config)
     out_dir = (
@@ -604,7 +614,11 @@ def main() -> None:
         first_records = load_jsonl(first_layer_path)
         first_by_id = latest_records(first_records)
         supervisor_path = out_dir / "supervisor_codings.jsonl"
-        supervised_done = done_ids_from_jsonl(supervisor_path) if args.resume else set()
+        supervised_done = (
+            done_ids_from_jsonl(supervisor_path)
+            if args.resume and not args.rerun_supervisor
+            else set()
+        )
         positive_todo = []
         for conv in transcripts:
             conv_id = str(conv["id"])
@@ -654,7 +668,7 @@ def main() -> None:
                 raw_dir=out_dir / "supervisor_raw_responses",
                 render_messages=supervisor_messages,
                 max_new_tokens=args.supervisor_max_new_tokens,
-                resume=args.resume,
+                resume=args.resume and not args.rerun_supervisor,
                 description="Supervising positive CAA codings (layer 2)",
             )
             release_model(supervisor_tokenizer, supervisor_model)

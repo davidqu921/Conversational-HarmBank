@@ -166,6 +166,19 @@ existing valid codings into the first-layer journal and runs only the required
 positive reviews. A supervisor error falls back to the first-layer label and is
 reported as `error_fallback`, so it can be retried with `--resume`.
 
+After changing the supervisor prompt, re-run only layer 2 while preserving the
+completed first-layer journal:
+
+```bash
+python -m CAA.scripts.code_caa_severity_with_hf \
+  --config CAA/configs/<experiment>.yaml \
+  --out-dir <existing-dual-layer-directory> \
+  --double-layer --resume --rerun-supervisor
+```
+
+`--rerun-supervisor` replaces `supervisor_codings.jsonl`; it requires both
+`--double-layer` and `--resume` to prevent an accidental first-layer rerun.
+
 ## Export manually reviewed severity labels
 
 After manually editing the `severity` column in an evaluator `codings.csv`,

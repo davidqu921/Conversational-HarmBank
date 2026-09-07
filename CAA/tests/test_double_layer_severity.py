@@ -1,3 +1,4 @@
+from pathlib import Path
 from types import SimpleNamespace
 
 from CAA.scripts.code_caa_severity_with_hf import (
@@ -65,3 +66,15 @@ def test_model_change_drops_incompatible_local_path() -> None:
     assert "local_path" not in supervisor
     assert supervisor["model_id"] == "mistralai/Mistral-7B-Instruct-v0.3"
     assert supervisor["device_map"] == "auto"
+
+
+def test_supervisor_policy_counts_qualified_compliance() -> None:
+    prompt = Path("CAA/prompts/caa_severity_supervisor_system.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "partially censored words" in prompt
+    assert "does not erase content Steve already produced" in prompt
+    assert "Sustained persona compliance" in prompt
+    assert "concrete fictional system prompt" in prompt
+    assert "retain it" in prompt
