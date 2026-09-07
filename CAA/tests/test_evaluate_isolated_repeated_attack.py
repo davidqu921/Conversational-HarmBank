@@ -9,7 +9,10 @@ from pathlib import Path
 import CAA.tests.test_isolated_repeated_attack  # noqa: F401
 
 from CAA.scripts.evaluate_isolated_repeated_attack import (
+    ISOLATED_RUBRIC_VERSION,
     build_outputs,
+    prepare_rubric_manifest,
+    prompt_sha256,
     select_inputs,
     write_outputs,
 )
@@ -255,6 +258,77 @@ class IsolatedEvaluationTests(unittest.TestCase):
                 (out_dir / "summary.json").read_text(encoding="utf-8")
             )
             self.assertEqual(summary["n_records"], 2)
+            self.assertEqual(summary["rubric_version"], ISOLATED_RUBRIC_VERSION)
+
+    def test_isolated_prompts_use_output_only_safe_boundary(self) -> None:
+        system = Path("CAA/prompts/isolated_severity_system.md").read_text(
+            encoding="utf-8"
+        )
+        supervisor = Path(
+            "CAA/prompts/isolated_severity_supervisor_system.md"
+        ).read_text(encoding="utf-8")
+        user = Path("CAA/prompts/isolated_severity_user_template.md").read_text(
+            encoding="utf-8"
+        )
+        supervisor_user = Path(
+            "CAA/prompts/isolated_severity_supervisor_user_template.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("Do not penalize Steve merely for responding", system)
+        self.assertIn("inappropriate words that occur only in the Student", supervisor)
+        self.assertIn("harmless informality", supervisor)
+        self.assertIn("positive decision must cite exact", supervisor_user)
+        self.assertNotIn("ATTEMPT", user)
+        self.assertNotIn("ATTEMPT", supervisor_user)
+
+    def test_rubric_manifest_blocks_incompatible_resume(self) -> None:
+        expected = {
+            "rubric_version": ISOLATED_RUBRIC_VERSION,
+            "first_layer_model": "llama",
+            "first_layer_system_prompt_sha256": prompt_sha256("first system"),
+            "first_layer_user_template_sha256": prompt_sha256("first user"),
+            "supervisor_model": "mistral",
+            "supervisor_system_prompt_sha256": prompt_sha256("second system"),
+            "supervisor_user_template_sha256": prompt_sha256("second user"),
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            manifest = Path(temp) / "rubric_manifest.json"
+            with self.assertRaisesRegex(ValueError, "no isolated-output-only"):
+                prepare_rubric_manifest(
+                    manifest,
+                    expected,
+                    resume=True,
+                    rerun_supervisor=False,
+                    has_first_layer_records=True,
+                )
+            prepare_rubric_manifest(
+                manifest,
+                expected,
+                resume=True,
+                rerun_supervisor=False,
+                has_first_layer_records=False,
+            )
+
+            changed_first = dict(expected)
+            changed_first["first_layer_system_prompt_sha256"] = "changed"
+            with self.assertRaisesRegex(ValueError, "first-layer rubric changed"):
+                prepare_rubric_manifest(
+                    manifest,
+                    changed_first,
+                    resume=True,
+                    rerun_supervisor=False,
+                    has_first_layer_records=True,
+                )
+
+            changed_supervisor = dict(expected)
+            changed_supervisor["supervisor_system_prompt_sha256"] = "changed"
+            prepare_rubric_manifest(
+                manifest,
+                changed_supervisor,
+                resume=True,
+                rerun_supervisor=True,
+                has_first_layer_records=True,
+            )
 
 
 if __name__ == "__main__":

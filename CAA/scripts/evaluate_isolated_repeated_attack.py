@@ -1,4 +1,4 @@
-"""Code isolated attack pairs and aggregate severity to the parent CAA ID.
+"""Code isolated attack pairs with an output-only harm rubric and aggregate.
 
 Pair transcripts are coded independently. A parent is successful when any pair
 is non-safe, and its severity is the maximum pair severity. Parent output is
@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import sys
 from collections import Counter, defaultdict
@@ -48,6 +49,8 @@ from CAA.scripts.run_repeated_weak_attack_experiment import (
 
 
 EVALUATION_DIR_NAME = "isolated_trajectory_seeded_repeated_weak_attack_evaluation"
+ISOLATED_RUBRIC_VERSION = "isolated_output_only_v1"
+DOUBLE_LAYER_OUTPUT_DIR_NAME = "dual-layer_output-only-v1_llama31_and_mistral"
 PAIR_CSV_FIELDS = (
     "id",
     "parent_id",
@@ -113,6 +116,57 @@ def write_csv(path: Path, rows: list[dict[str, Any]], fields: tuple[str, ...]) -
 
 def compact(value: Any) -> str:
     return " ".join(str(value or "").strip().split())
+
+
+def prompt_sha256(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def prepare_rubric_manifest(
+    path: Path,
+    expected: dict[str, Any],
+    *,
+    resume: bool,
+    rerun_supervisor: bool,
+    has_first_layer_records: bool,
+) -> None:
+    """Prevent resume from mixing labels made under incompatible prompts."""
+    if resume and has_first_layer_records:
+        if not path.is_file():
+            raise ValueError(
+                "Existing first-layer records have no isolated-output-only rubric "
+                "manifest. Use the new default output directory or an empty --out-dir."
+            )
+        existing = json.loads(path.read_text(encoding="utf-8"))
+        immutable_keys = (
+            "rubric_version",
+            "first_layer_model",
+            "first_layer_system_prompt_sha256",
+            "first_layer_user_template_sha256",
+        )
+        mismatched = [
+            key for key in immutable_keys if existing.get(key) != expected.get(key)
+        ]
+        if mismatched:
+            raise ValueError(
+                "Cannot resume because the first-layer rubric changed: "
+                + ", ".join(mismatched)
+                + ". Use a new --out-dir and re-code layer 1."
+            )
+        supervisor_keys = (
+            "supervisor_model",
+            "supervisor_system_prompt_sha256",
+            "supervisor_user_template_sha256",
+        )
+        supervisor_changed = any(
+            existing.get(key) != expected.get(key) for key in supervisor_keys
+        )
+        if supervisor_changed and not rerun_supervisor:
+            raise ValueError(
+                "Cannot resume because the supervisor model or prompt changed. "
+                "Add --rerun-supervisor to replace layer 2, or restore the prior prompt."
+            )
+    write_json(path, expected)
 
 
 def latest_records(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -258,6 +312,7 @@ def build_outputs(
     metadata_by_parent: dict[str, dict[str, str]],
     coder_model: str,
     supervisor_model: str | None = None,
+    rubric_version: str = ISOLATED_RUBRIC_VERSION,
 ) -> tuple[
     list[dict[str, Any]],
     list[dict[str, Any]],
@@ -422,12 +477,13 @@ def build_outputs(
     )
     summary = {
         "evaluation_mode": (
-            "isolated_pair_double_layer_local_hf_severity_max_parent"
+            "isolated_pair_double_layer_output_only_severity_max_parent"
             if supervisor_model
-            else "isolated_pair_local_hf_severity_max_parent"
+            else "isolated_pair_output_only_severity_max_parent"
         ),
         "coder_model": coder_model,
         "supervisor_model": supervisor_model,
+        "rubric_version": rubric_version,
         "n_records": len(manifests),
         "n_coded": len(parent_csv),
         "n_errors": len(manifests) - len(parent_csv),
@@ -470,6 +526,7 @@ def write_outputs(
     metadata_by_parent: dict[str, dict[str, str]],
     coder_model: str,
     supervisor_model: str | None = None,
+    rubric_version: str = ISOLATED_RUBRIC_VERSION,
 ) -> None:
     pair_jsonl, pair_csv, parent_jsonl, parent_csv, summary = build_outputs(
         manifests,
@@ -478,6 +535,7 @@ def write_outputs(
         metadata_by_parent,
         coder_model,
         supervisor_model,
+        rubric_version,
     )
     write_jsonl(out_dir / "pair_codings.jsonl", pair_jsonl)
     write_csv(out_dir / "pair_codings.csv", pair_csv, PAIR_CSV_FIELDS)
@@ -489,8 +547,8 @@ def write_outputs(
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
-            "Code isolated attack pairs, then aggregate maximum severity and any "
-            "success to each parent CAA ID."
+            "Code one-turn isolated pairs from Steve's actual output only, then "
+            "aggregate maximum severity and any success to each parent CAA ID."
         )
     )
     parser.add_argument("--config", type=Path, required=True)
@@ -503,6 +561,16 @@ def main() -> None:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--model-id", default=DEFAULT_CODER_MODEL)
     parser.add_argument("--max-new-tokens", type=int, default=256)
+    parser.add_argument(
+        "--system-prompt",
+        type=Path,
+        default=Path("CAA/prompts/isolated_severity_system.md"),
+    )
+    parser.add_argument(
+        "--user-template",
+        type=Path,
+        default=Path("CAA/prompts/isolated_severity_user_template.md"),
+    )
     parser.add_argument(
         "--double-layer",
         action=argparse.BooleanOptionalAction,
@@ -522,12 +590,12 @@ def main() -> None:
     parser.add_argument(
         "--supervisor-system-prompt",
         type=Path,
-        default=Path("CAA/prompts/caa_severity_supervisor_system.md"),
+        default=Path("CAA/prompts/isolated_severity_supervisor_system.md"),
     )
     parser.add_argument(
         "--supervisor-user-template",
         type=Path,
-        default=Path("CAA/prompts/caa_severity_supervisor_user_template.md"),
+        default=Path("CAA/prompts/isolated_severity_supervisor_user_template.md"),
     )
     parser.add_argument("--model-cache", type=Path)
     parser.add_argument("--coder-model-path", type=Path)
@@ -554,9 +622,9 @@ def main() -> None:
         else config.output_dir
         / EVALUATION_DIR_NAME
         / (
-            "dual-layer_severity_llama31_and_mistral"
+            DOUBLE_LAYER_OUTPUT_DIR_NAME
             if args.double_layer
-            else "severity_llama31"
+            else "output-only-v1_severity_llama31"
         )
     )
     if not transcripts_path.is_file():
@@ -573,8 +641,8 @@ def main() -> None:
     if not manifests or not transcripts:
         raise SystemExit("No isolated parent/pair records selected")
     metadata_by_parent = load_strategy_metadata(config)
-    system_prompt = read_text("CAA/prompts/caa_severity_system.md")
-    user_template = read_text("CAA/prompts/caa_severity_user_template.md")
+    system_prompt = read_text(args.system_prompt)
+    user_template = read_text(args.user_template)
     supervisor_system_prompt = (
         read_text(args.supervisor_system_prompt) if args.double_layer else ""
     )
@@ -619,14 +687,43 @@ def main() -> None:
         and not first_layer_path.exists()
         and final_path.exists()
     ):
-        legacy_first_layer = []
-        for record in load_jsonl(final_path):
-            migrated = dict(record)
-            migrated["llm_output"] = record.get("first_layer_output") or record.get(
-                "llm_output"
-            )
-            legacy_first_layer.append(migrated)
-        write_jsonl(first_layer_path, legacy_first_layer)
+        raise SystemExit(
+            "Refusing to migrate legacy pair codings into the isolated-output-only "
+            "rubric. Use the new default output directory or an empty --out-dir "
+            "so layer 1 is re-coded with the new prompt."
+        )
+
+    rubric_manifest = {
+        "rubric_version": ISOLATED_RUBRIC_VERSION,
+        "first_layer_model": args.model_id,
+        "supervisor_model": args.supervisor_model_id if args.double_layer else None,
+        "first_layer_system_prompt": str(args.system_prompt),
+        "first_layer_system_prompt_sha256": prompt_sha256(system_prompt),
+        "first_layer_user_template": str(args.user_template),
+        "first_layer_user_template_sha256": prompt_sha256(user_template),
+        "supervisor_system_prompt": (
+            str(args.supervisor_system_prompt) if args.double_layer else None
+        ),
+        "supervisor_system_prompt_sha256": (
+            prompt_sha256(supervisor_system_prompt) if args.double_layer else None
+        ),
+        "supervisor_user_template": (
+            str(args.supervisor_user_template) if args.double_layer else None
+        ),
+        "supervisor_user_template_sha256": (
+            prompt_sha256(supervisor_user_template) if args.double_layer else None
+        ),
+    }
+    try:
+        prepare_rubric_manifest(
+            out_dir / "rubric_manifest.json",
+            rubric_manifest,
+            resume=args.resume,
+            rerun_supervisor=args.rerun_supervisor,
+            has_first_layer_records=first_layer_path.is_file(),
+        )
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
 
     done = done_ids_from_jsonl(first_layer_path) if args.resume else set()
     todo = [row for row in transcripts if compact(row["id"]) not in done]
@@ -786,6 +883,7 @@ def main() -> None:
             metadata_by_parent,
             args.model_id,
             args.supervisor_model_id,
+            ISOLATED_RUBRIC_VERSION,
         )
     else:
         latest_by_pair = latest_records(first_records)
@@ -796,6 +894,8 @@ def main() -> None:
             latest_by_pair,
             metadata_by_parent,
             args.model_id,
+            None,
+            ISOLATED_RUBRIC_VERSION,
         )
     print(f"Done. Results in {out_dir}", file=sys.stderr)
 
