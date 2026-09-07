@@ -134,6 +134,61 @@ class IsolatedEvaluationTests(unittest.TestCase):
             ["caa_0001__pair_01", "caa_0001__pair_03"],
         )
 
+    def test_parent_aggregation_uses_supervisor_final_pair_labels(self) -> None:
+        records = {
+            row["id"]: row
+            for row in (
+                coding("caa_0001", 1, "0 - Safe"),
+                coding("caa_0001", 2, "2 - Major"),
+                coding("caa_0001", 3, "1 - Minor"),
+            )
+        }
+        records["caa_0001__pair_02"].update(
+            {
+                "llm_output": {
+                    "severity": "0 - Safe",
+                    "reasoning": "supervisor rejected the positive",
+                },
+                "first_layer_output": {
+                    "severity": "2 - Major",
+                    "reasoning": "first layer called this major",
+                },
+                "supervision_status": "completed",
+                "supervisor_output": {
+                    "severity": "0 - Safe",
+                    "reasoning": "supervisor rejected the positive",
+                },
+            }
+        )
+        records["caa_0001__pair_03"].update(
+            {
+                "first_layer_output": records["caa_0001__pair_03"]["llm_output"],
+                "supervision_status": "completed",
+                "supervisor_output": records["caa_0001__pair_03"]["llm_output"],
+            }
+        )
+
+        _, pair_csv, _, parent_csv, summary = build_outputs(
+            self.manifests[:1],
+            self.transcripts[:3],
+            records,
+            self.metadata,
+            "test-coder",
+            "test-supervisor",
+        )
+
+        self.assertEqual(parent_csv[0]["severity"], "1 - Minor")
+        self.assertTrue(parent_csv[0]["success"])
+        self.assertEqual(summary["pair_level"]["first_layer_n_success"], 2)
+        self.assertEqual(summary["pair_level"]["n_success"], 1)
+        self.assertEqual(
+            summary["pair_level"]["supervised_severity_transitions"],
+            {"2 - Major -> 0 - Safe": 1, "1 - Minor -> 1 - Minor": 1},
+        )
+        rejected = next(row for row in pair_csv if row["pair_index"] == 2)
+        self.assertEqual(rejected["first_layer_severity"], "2 - Major")
+        self.assertEqual(rejected["severity"], "0 - Safe")
+
     def test_missing_pair_makes_parent_incomplete_not_safe(self) -> None:
         records = {
             row["id"]: row

@@ -10,13 +10,11 @@ import argparse
 import csv
 import json
 import sys
-import time
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
 import torch
-from rich.progress import track
 
 from CAA.scripts.caa_common import (
     load_config,
@@ -26,14 +24,20 @@ from CAA.scripts.caa_common import (
 )
 from CAA.scripts.code_caa_severity_with_hf import (
     DEFAULT_CODER_MODEL,
+    DEFAULT_SUPERVISOR_MODEL,
     SEVERITY,
     SUCCESS_SEVERITIES,
     canonicalize_output,
-    extract_json_object,
-    generate_chat,
+    code_stage,
+    done_ids_from_jsonl,
     load_strategy_metadata,
+    merge_supervised_records,
+    model_config_for_id,
     read_text,
+    release_model,
+    render_supervisor_prompt,
     render_user_prompt,
+    valid_record_output,
 )
 from CAA.scripts.model_runtime import load_local_model, runtime_summary
 from CAA.scripts.run_isolated_repeated_attack_experiment import OUTPUT_DIR_NAME
@@ -56,6 +60,13 @@ PAIR_CSV_FIELDS = (
     "success",
     "reasoning",
     "duration_s",
+    "first_layer_severity",
+    "first_layer_reasoning",
+    "supervision_status",
+    "supervisor_severity",
+    "supervisor_reasoning",
+    "first_layer_duration_s",
+    "supervisor_duration_s",
 )
 PARENT_CSV_FIELDS = (
     "id",
@@ -121,6 +132,18 @@ def valid_pair_output(record: dict[str, Any] | None) -> dict[str, str] | None:
         return canonicalize_output(record["llm_output"])
     except ValueError:
         return None
+
+
+def pair_model_config(
+    config: Any,
+    model_id: str,
+    explicit_path: Path | None,
+    role: str,
+) -> dict[str, Any]:
+    """Build a portable coder/supervisor config without leaking attacker paths."""
+    return portable_model_config(
+        model_config_for_id(config, model_id), explicit_path, role
+    )
 
 
 def select_inputs(
@@ -234,6 +257,7 @@ def build_outputs(
     latest_by_pair: dict[str, dict[str, Any]],
     metadata_by_parent: dict[str, dict[str, str]],
     coder_model: str,
+    supervisor_model: str | None = None,
 ) -> tuple[
     list[dict[str, Any]],
     list[dict[str, Any]],
@@ -260,11 +284,25 @@ def build_outputs(
                 str((record or {}).get("error") or "missing or invalid pair coding")
             ),
             "duration_s": (record or {}).get("duration_s", ""),
+            "first_layer_output": (record or {}).get("first_layer_output"),
+            "supervision_status": (record or {}).get(
+                "supervision_status", "not_enabled"
+            ),
+            "supervisor_output": (record or {}).get("supervisor_output"),
+            "supervisor_error": (record or {}).get("supervisor_error"),
+            "first_layer_duration_s": (record or {}).get(
+                "first_layer_duration_s", (record or {}).get("duration_s", "")
+            ),
+            "supervisor_duration_s": (record or {}).get(
+                "supervisor_duration_s", ""
+            ),
         }
         pair_jsonl.append(canonical_record)
         if canonical is None:
             continue
         metadata = metadata_by_parent.get(parent_id, {})
+        first_output = canonical_record["first_layer_output"] or canonical
+        supervisor_output = canonical_record["supervisor_output"] or {}
         row = {
             "id": pair_id,
             "parent_id": parent_id,
@@ -279,6 +317,13 @@ def build_outputs(
             "success": canonical["severity"] in SUCCESS_SEVERITIES,
             "reasoning": canonical["reasoning"],
             "duration_s": canonical_record["duration_s"],
+            "first_layer_severity": first_output.get("severity", ""),
+            "first_layer_reasoning": first_output.get("reasoning", ""),
+            "supervision_status": canonical_record["supervision_status"],
+            "supervisor_severity": supervisor_output.get("severity", ""),
+            "supervisor_reasoning": supervisor_output.get("reasoning", ""),
+            "first_layer_duration_s": canonical_record["first_layer_duration_s"],
+            "supervisor_duration_s": canonical_record["supervisor_duration_s"],
         }
         pair_csv.append(row)
         pairs_by_parent[parent_id].append(row)
@@ -362,9 +407,27 @@ def build_outputs(
 
     pair_successes = sum(bool(row["success"]) for row in pair_csv)
     parent_successes = sum(bool(row["success"]) for row in parent_csv)
+    first_layer_pair_successes = sum(
+        row["first_layer_severity"] in SUCCESS_SEVERITIES for row in pair_csv
+    )
+    supervision_counts = dict(
+        Counter(row["supervision_status"] for row in pair_csv)
+    )
+    severity_transitions = dict(
+        Counter(
+            f"{row['first_layer_severity']} -> {row['severity']}"
+            for row in pair_csv
+            if row["supervision_status"] == "completed"
+        )
+    )
     summary = {
-        "evaluation_mode": "isolated_pair_local_hf_severity_max_parent",
+        "evaluation_mode": (
+            "isolated_pair_double_layer_local_hf_severity_max_parent"
+            if supervisor_model
+            else "isolated_pair_local_hf_severity_max_parent"
+        ),
         "coder_model": coder_model,
+        "supervisor_model": supervisor_model,
         "n_records": len(manifests),
         "n_coded": len(parent_csv),
         "n_errors": len(manifests) - len(parent_csv),
@@ -384,6 +447,13 @@ def build_outputs(
             "n_success": pair_successes,
             "success_rate": proportion(pair_successes, len(pair_csv)),
             "severity_counts": dict(Counter(row["severity"] for row in pair_csv)),
+            "first_layer_n_success": first_layer_pair_successes,
+            "first_layer_success_rate": proportion(
+                first_layer_pair_successes, len(pair_csv)
+            ),
+            "supervision_counts": supervision_counts,
+            "n_supervisor_errors": supervision_counts.get("error_fallback", 0),
+            "supervised_severity_transitions": severity_transitions,
         },
         "pairs_per_parent": dict(
             Counter(str(int(row.get("n_conversations", 0))) for row in manifests)
@@ -399,6 +469,7 @@ def write_outputs(
     latest_by_pair: dict[str, dict[str, Any]],
     metadata_by_parent: dict[str, dict[str, str]],
     coder_model: str,
+    supervisor_model: str | None = None,
 ) -> None:
     pair_jsonl, pair_csv, parent_jsonl, parent_csv, summary = build_outputs(
         manifests,
@@ -406,6 +477,7 @@ def write_outputs(
         latest_by_pair,
         metadata_by_parent,
         coder_model,
+        supervisor_model,
     )
     write_jsonl(out_dir / "pair_codings.jsonl", pair_jsonl)
     write_csv(out_dir / "pair_codings.csv", pair_csv, PAIR_CSV_FIELDS)
@@ -431,9 +503,38 @@ def main() -> None:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--model-id", default=DEFAULT_CODER_MODEL)
     parser.add_argument("--max-new-tokens", type=int, default=256)
+    parser.add_argument(
+        "--double-layer",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Have Mistral independently re-code every positive first-layer pair.",
+    )
+    parser.add_argument("--supervisor-model-id", default=DEFAULT_SUPERVISOR_MODEL)
+    parser.add_argument("--supervisor-max-new-tokens", type=int, default=256)
+    parser.add_argument(
+        "--rerun-supervisor",
+        action="store_true",
+        help=(
+            "Re-code every first-layer-positive pair and replace the supervisor "
+            "journal; requires --double-layer --resume."
+        ),
+    )
+    parser.add_argument(
+        "--supervisor-system-prompt",
+        type=Path,
+        default=Path("CAA/prompts/caa_severity_supervisor_system.md"),
+    )
+    parser.add_argument(
+        "--supervisor-user-template",
+        type=Path,
+        default=Path("CAA/prompts/caa_severity_supervisor_user_template.md"),
+    )
     parser.add_argument("--model-cache", type=Path)
     parser.add_argument("--coder-model-path", type=Path)
+    parser.add_argument("--supervisor-model-path", type=Path)
     args = parser.parse_args()
+    if args.rerun_supervisor and not (args.double_layer and args.resume):
+        parser.error("--rerun-supervisor requires both --double-layer and --resume")
 
     config = load_config(args.config)
     conversation_dir = config.output_dir / OUTPUT_DIR_NAME
@@ -450,7 +551,13 @@ def main() -> None:
     out_dir = (
         resolve_project_path(args.out_dir)
         if args.out_dir
-        else config.output_dir / EVALUATION_DIR_NAME / "severity_llama31"
+        else config.output_dir
+        / EVALUATION_DIR_NAME
+        / (
+            "dual-layer_severity_llama31_and_mistral"
+            if args.double_layer
+            else "severity_llama31"
+        )
     )
     if not transcripts_path.is_file():
         raise SystemExit(f"Missing pair transcripts: {transcripts_path}")
@@ -468,11 +575,24 @@ def main() -> None:
     metadata_by_parent = load_strategy_metadata(config)
     system_prompt = read_text("CAA/prompts/caa_severity_system.md")
     user_template = read_text("CAA/prompts/caa_severity_user_template.md")
+    supervisor_system_prompt = (
+        read_text(args.supervisor_system_prompt) if args.double_layer else ""
+    )
+    supervisor_user_template = (
+        read_text(args.supervisor_user_template) if args.double_layer else ""
+    )
 
     if args.dry_run:
         dry_dir = out_dir / "dry_run"
         dry_dir.mkdir(parents=True, exist_ok=True)
         (dry_dir / "system_prompt.md").write_text(system_prompt, encoding="utf-8")
+        if args.double_layer:
+            (dry_dir / "supervisor_system_prompt.md").write_text(
+                supervisor_system_prompt, encoding="utf-8"
+            )
+            (dry_dir / "supervisor_user_template.md").write_text(
+                supervisor_user_template, encoding="utf-8"
+            )
         for transcript in transcripts:
             parent_id = compact(transcript["parent_attack_id"])
             metadata = metadata_by_parent.get(parent_id, {})
@@ -487,33 +607,37 @@ def main() -> None:
         return
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    attempts_path = out_dir / "pair_coding_attempts.jsonl"
-    previous_attempts = load_jsonl(attempts_path) if attempts_path.exists() else []
-    latest_by_pair = latest_records(previous_attempts) if args.resume else {}
-    done = {
-        pair_id
-        for pair_id, record in latest_by_pair.items()
-        if valid_pair_output(record) is not None
-    }
+    final_path = out_dir / "pair_codings.jsonl"
+    first_layer_path = (
+        out_dir / "first_layer_pair_codings.jsonl"
+        if args.double_layer
+        else out_dir / "pair_coding_attempts.jsonl"
+    )
+    if (
+        args.double_layer
+        and args.resume
+        and not first_layer_path.exists()
+        and final_path.exists()
+    ):
+        legacy_first_layer = []
+        for record in load_jsonl(final_path):
+            migrated = dict(record)
+            migrated["llm_output"] = record.get("first_layer_output") or record.get(
+                "llm_output"
+            )
+            legacy_first_layer.append(migrated)
+        write_jsonl(first_layer_path, legacy_first_layer)
+
+    done = done_ids_from_jsonl(first_layer_path) if args.resume else set()
     todo = [row for row in transcripts if compact(row["id"]) not in done]
     print(
         f"Loaded {len(manifests)} parent IDs and {len(transcripts)} pairs; "
         f"{len(done)} pairs already coded; {len(todo)} remaining.",
         file=sys.stderr,
     )
-    if not todo:
-        write_outputs(
-            out_dir,
-            manifests,
-            transcripts,
-            latest_by_pair,
-            metadata_by_parent,
-            args.model_id,
-        )
-        print(f"All pair transcripts already coded. Results in {out_dir}")
-        return
-
     if (
+        todo
+        and
         bool(config.raw.get("conversation", {}).get("require_cuda", True))
         and not torch.cuda.is_available()
     ):
@@ -523,84 +647,157 @@ def main() -> None:
         if args.model_cache is not None
         else model_cache_path(config.raw)
     )
-    coder_cfg = dict(config.raw.get("attacker_model", {}))
-    if args.model_id != str(coder_cfg.get("model_id", "")):
-        coder_cfg.pop("local_path", None)
-    coder_cfg["model_id"] = args.model_id
-    coder_cfg = portable_model_config(coder_cfg, args.coder_model_path, "coder")
     print("Runtime:", json.dumps(runtime_summary(), ensure_ascii=False), file=sys.stderr)
     print(f"Model cache: {cache_dir}", file=sys.stderr)
-    print(f"Loading local coder model: {args.model_id}", file=sys.stderr)
-    tokenizer, model, source = load_local_model(coder_cfg, cache_dir)
-    print(f"Coder model source: {source}", file=sys.stderr)
-    raw_dir = out_dir / "raw_responses"
-    raw_dir.mkdir(parents=True, exist_ok=True)
-
-    with attempts_path.open("a" if args.resume else "w", encoding="utf-8") as journal:
-        for transcript in track(todo, description="Coding isolated attack pairs"):
-            started = time.time()
-            pair_id = compact(transcript["id"])
-            parent_id = compact(transcript["parent_attack_id"])
-            metadata = metadata_by_parent.get(parent_id, {})
-            messages = [
+    if todo:
+        print(f"Loading local coder model: {args.model_id}", file=sys.stderr)
+        tokenizer, model, source = load_local_model(
+            pair_model_config(
+                config, args.model_id, args.coder_model_path, "coder"
+            ),
+            cache_dir,
+        )
+        print(f"Coder model source: {source}", file=sys.stderr)
+        code_stage(
+            transcripts=todo,
+            tokenizer=tokenizer,
+            model=model,
+            journal_path=first_layer_path,
+            raw_dir=(
+                out_dir / "first_layer_raw_responses"
+                if args.double_layer
+                else out_dir / "raw_responses"
+            ),
+            render_messages=lambda transcript: [
                 {"role": "system", "content": system_prompt},
                 {
                     "role": "user",
                     "content": render_user_prompt(
-                        user_template, transcript, metadata
+                        user_template,
+                        transcript,
+                        metadata_by_parent.get(
+                            compact(transcript["parent_attack_id"]), {}
+                        ),
                     ),
                 },
-            ]
-            raw_text = ""
-            output = None
-            error = None
-            try:
-                raw_text = generate_chat(
-                    tokenizer, model, messages, args.max_new_tokens
-                )
-                output = canonicalize_output(extract_json_object(raw_text))
-            except Exception as exc:
-                error = f"{type(exc).__name__}: {exc}"
-            duration = round(time.time() - started, 2)
-            record = {
-                "id": pair_id,
-                "parent_id": parent_id,
-                "pair_index": int(transcript["isolated_conversation_index"]),
-                "llm_output": output,
-                "error": error,
-                "duration_s": duration,
-            }
-            journal.write(json.dumps(record, ensure_ascii=False) + "\n")
-            journal.flush()
-            latest_by_pair[pair_id] = record
-            write_json(
-                raw_dir / f"{pair_id}.json",
-                {
-                    **record,
-                    "raw_text": raw_text,
-                    "parsed_output": output,
-                },
-            )
-            if error:
-                print(f"id={pair_id} ERROR {error}", file=sys.stderr)
-            else:
-                print(
-                    f"id={pair_id} severity={output['severity']} ({duration}s)",
-                    file=sys.stderr,
-                )
+            ],
+            max_new_tokens=args.max_new_tokens,
+            resume=args.resume,
+            description="Coding isolated pairs (layer 1)",
+        )
+        release_model(tokenizer, model)
 
-    write_outputs(
-        out_dir,
-        manifests,
-        transcripts,
-        latest_by_pair,
-        metadata_by_parent,
-        args.model_id,
-    )
+    first_records = load_jsonl(first_layer_path) if first_layer_path.exists() else []
+    first_by_pair = latest_records(first_records)
+    if args.double_layer:
+        supervisor_path = out_dir / "supervisor_pair_codings.jsonl"
+        supervised_done = (
+            done_ids_from_jsonl(supervisor_path)
+            if args.resume and not args.rerun_supervisor
+            else set()
+        )
+        positive_todo = []
+        for transcript in transcripts:
+            pair_id = compact(transcript["id"])
+            first_output = valid_record_output(first_by_pair.get(pair_id))
+            if (
+                first_output is not None
+                and first_output["severity"] in SUCCESS_SEVERITIES
+                and pair_id not in supervised_done
+            ):
+                positive_todo.append(transcript)
+        print(
+            f"Layer 2: {len(supervised_done)} positives already supervised; "
+            f"{len(positive_todo)} to supervise.",
+            file=sys.stderr,
+        )
+        if positive_todo:
+            if (
+                bool(config.raw.get("conversation", {}).get("require_cuda", True))
+                and not torch.cuda.is_available()
+            ):
+                raise SystemExit("CUDA is required but torch.cuda.is_available() is false")
+            print(
+                f"Loading local supervisor model: {args.supervisor_model_id}",
+                file=sys.stderr,
+            )
+            supervisor_tokenizer, supervisor_model, source = load_local_model(
+                pair_model_config(
+                    config,
+                    args.supervisor_model_id,
+                    args.supervisor_model_path,
+                    "supervisor",
+                ),
+                cache_dir,
+            )
+            print(f"Supervisor model source: {source}", file=sys.stderr)
+
+            def supervisor_messages(
+                transcript: dict[str, Any],
+            ) -> list[dict[str, str]]:
+                pair_id = compact(transcript["id"])
+                first_output = valid_record_output(first_by_pair.get(pair_id))
+                if first_output is None:
+                    raise ValueError(
+                        f"missing valid first-layer output for pair {pair_id}"
+                    )
+                metadata = metadata_by_parent.get(
+                    compact(transcript["parent_attack_id"]), {}
+                )
+                return [
+                    {"role": "system", "content": supervisor_system_prompt},
+                    {
+                        "role": "user",
+                        "content": render_supervisor_prompt(
+                            supervisor_user_template,
+                            transcript,
+                            metadata,
+                            first_output,
+                        ),
+                    },
+                ]
+
+            code_stage(
+                transcripts=positive_todo,
+                tokenizer=supervisor_tokenizer,
+                model=supervisor_model,
+                journal_path=supervisor_path,
+                raw_dir=out_dir / "supervisor_raw_responses",
+                render_messages=supervisor_messages,
+                max_new_tokens=args.supervisor_max_new_tokens,
+                resume=args.resume and not args.rerun_supervisor,
+                description="Supervising positive isolated pairs (layer 2)",
+            )
+            release_model(supervisor_tokenizer, supervisor_model)
+
+        supervisor_records = (
+            load_jsonl(supervisor_path) if supervisor_path.exists() else []
+        )
+        final_records = merge_supervised_records(
+            first_records, supervisor_records, args.supervisor_model_id
+        )
+        write_jsonl(final_path, final_records)
+        latest_by_pair = latest_records(final_records)
+        write_outputs(
+            out_dir,
+            manifests,
+            transcripts,
+            latest_by_pair,
+            metadata_by_parent,
+            args.model_id,
+            args.supervisor_model_id,
+        )
+    else:
+        latest_by_pair = latest_records(first_records)
+        write_outputs(
+            out_dir,
+            manifests,
+            transcripts,
+            latest_by_pair,
+            metadata_by_parent,
+            args.model_id,
+        )
     print(f"Done. Results in {out_dir}", file=sys.stderr)
-    del model, tokenizer
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":

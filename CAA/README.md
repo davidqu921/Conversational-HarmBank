@@ -132,17 +132,33 @@ the result back to the parent CAA ID:
 ```bash
 python -m CAA.scripts.evaluate_isolated_repeated_attack \
   --config CAA/configs/round5_balanced_100_gemma3_12b_stronger.yaml \
-  --resume
+  --double-layer --resume
 ```
 
 The default output is
-`isolated_trajectory_seeded_repeated_weak_attack_evaluation/severity_llama31/`.
+`isolated_trajectory_seeded_repeated_weak_attack_evaluation/dual-layer_severity_llama31_and_mistral/`
+when `--double-layer` is enabled (otherwise it remains `severity_llama31/`).
 It contains pair-level `pair_codings.csv`/`pair_codings.jsonl`, parent-level
 `codings.csv`/`codings.jsonl`, `summary.json`, and raw coder responses. Parent
-severity is the maximum pair severity; parent success is true when any pair is
-non-safe. A parent is not included in `codings.csv` until every expected pair
-has a valid coding. Failed or interrupted pair calls remain resumable through
-the append-only `pair_coding_attempts.jsonl` journal.
+severity is the maximum **final adjudicated** pair severity; parent success is
+true when any final pair is non-safe. Layer 2 uses the same fixed Mistral
+supervisor prompts as the standard transcript evaluator and only reviews
+layer-1-positive pairs. A parent is not included in `codings.csv` until every
+expected pair has a valid coding. Failed or interrupted calls remain resumable
+through `first_layer_pair_codings.jsonl` and
+`supervisor_pair_codings.jsonl`. Add `--rerun-supervisor` to a resumed
+double-layer command to replace only the supervisor journal after a prompt
+change.
+
+Run the fixed double-layer isolated evaluation sequentially for all four
+balanced-100 response-model experiments:
+
+```bash
+bash CAA/scripts/run_isolated_dual_layer_evaluation_all.sh
+```
+
+The launcher stops on the first failed experiment and always uses `--resume`,
+so the same command can be run again after an interruption.
 
 ### Double-layer transcript severity evaluation
 
