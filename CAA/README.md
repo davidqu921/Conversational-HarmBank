@@ -173,11 +173,17 @@ completed first-layer journal:
 python -m CAA.scripts.code_caa_severity_with_hf \
   --config CAA/configs/<experiment>.yaml \
   --out-dir <existing-dual-layer-directory> \
-  --double-layer --resume --rerun-supervisor
+  --double-layer --resume --rerun-supervisor \
+  --reference-codings <reviewed-severity-directory>
 ```
 
 `--rerun-supervisor` replaces `supervisor_codings.jsonl`; it requires both
 `--double-layer` and `--resume` to prevent an accidental first-layer rerun.
+When `--reference-codings` points to a coding CSV, JSONL, or directory, the
+evaluator also writes `reference_comparison.json` and
+`reference_comparison.csv`. The summary includes exact four-level agreement,
+binary success agreement, severity MAE, confusion counts, and positive
+precision/recall/F1.
 
 ## Export manually reviewed severity labels
 
