@@ -545,6 +545,13 @@ def write_outputs(
 
 
 def main() -> None:
+    # New evaluations use the unified binary-screen / severity pipeline.
+    if "--legacy-rubric" not in sys.argv:
+        from CAA.scripts.unified_severity import main as unified_main
+        unified_main(isolated=True)
+        return
+    sys.argv.remove("--legacy-rubric")
+
     parser = argparse.ArgumentParser(
         description=(
             "Code one-turn isolated pairs from Steve's actual output only, then "

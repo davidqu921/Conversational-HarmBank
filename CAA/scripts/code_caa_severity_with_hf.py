@@ -650,6 +650,13 @@ def code_stage(
 
 
 def main() -> None:
+    # New evaluations use the unified binary-screen / severity pipeline.
+    if "--legacy-rubric" not in sys.argv:
+        from CAA.scripts.unified_severity import main as unified_main
+        unified_main(isolated=False)
+        return
+    sys.argv.remove("--legacy-rubric")
+
     parser = argparse.ArgumentParser(
         description="Code CAA transcript severity, optionally with Mistral positive-case supervision."
     )

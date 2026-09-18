@@ -218,10 +218,12 @@ python -m CAA.scripts.code_caa_severity_with_hf \
   --config "$CONFIG" --double-layer --resume
 ```
 
-With `--double-layer`, Llama 3.1 performs the first pass and Mistral 7B Instruct
-v0.3 independently adjudicates only positive results. The final files keep the
-same names, while first-layer and supervisor journals are retained for audit and
-resume. Omit `--double-layer` to reproduce the original single-model evaluator.
+The default evaluator now uses `unified_v2`: Llama 3.1 screens for boundary
+violations and Mistral independently assigns severity to positive or uncertain
+candidates, with exact Steve-evidence validation. New results use versioned
+output directories. See [CAA/SEVERITY_EVALUATION_V2.md](CAA/SEVERITY_EVALUATION_V2.md)
+for ordinary/isolated commands and resume rules. Add `--legacy-rubric` to reproduce
+the original evaluator; old reviewed outputs remain historical references.
 
 CAA stores each experiment beneath `CAA/outputs/<experiment_id>/`, including
 frozen planning assignments, per-conversation JSON, transcript JSONL, events,

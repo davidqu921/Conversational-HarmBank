@@ -1,5 +1,15 @@
 # Conversational Attack Agent (CAA)
 
+**Separate harm-gate comparison:** [HARM_GATE_EVALUATION_V1.md](HARM_GATE_EVALUATION_V1.md)
+documents the optional harmful/not-harmful → severity evaluator. It uses a new
+entry point and output directory; the unified_v2 default remains unchanged.
+
+**New evaluation default:** both severity entry points now use the shared
+`unified_v2` binary-screen / blind-severity pipeline. Read
+[SEVERITY_EVALUATION_V2.md](SEVERITY_EVALUATION_V2.md) for the active rubric,
+new output directories and commands. The evaluation descriptions below document
+legacy behavior; add `--legacy-rubric` when reproducing those runs.
+
 This folder contains the design plan for the final project stage: an automated
 Conversational Attack Agent that uses CAB/CAG-derived strategies to evaluate a
 response model's safety behavior across repeated multi-turn attacks.

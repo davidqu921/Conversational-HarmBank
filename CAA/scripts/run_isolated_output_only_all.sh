@@ -65,6 +65,7 @@ for index in "${!CONFIGS[@]}"; do
 
   echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] Starting ${task_number}/${total}: ${task}"
   "${PYTHON_BIN}" -u -m CAA.scripts.evaluate_isolated_repeated_attack \
+    --legacy-rubric \
     --config "${config}" \
     --model-id "meta-llama/Llama-3.1-8B-Instruct" \
     --supervisor-model-id "mistralai/Mistral-7B-Instruct-v0.3" \
