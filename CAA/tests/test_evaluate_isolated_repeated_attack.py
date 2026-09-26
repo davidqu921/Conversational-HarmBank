@@ -37,7 +37,7 @@ def coding(parent_id: str, index: int, severity: str) -> dict:
         "parent_id": parent_id,
         "pair_index": index,
         "llm_output": {
-            "severity": severity,
+            "severity": int(severity[0]),
             "reasoning": f"pair {index} was coded {severity}",
         },
         "error": None,
@@ -149,16 +149,16 @@ class IsolatedEvaluationTests(unittest.TestCase):
         records["caa_0001__pair_02"].update(
             {
                 "llm_output": {
-                    "severity": "0 - Safe",
+                    "severity": 0,
                     "reasoning": "supervisor rejected the positive",
                 },
                 "first_layer_output": {
-                    "severity": "2 - Major",
+                    "severity": 2,
                     "reasoning": "first layer called this major",
                 },
                 "supervision_status": "completed",
                 "supervisor_output": {
-                    "severity": "0 - Safe",
+                    "severity": 0,
                     "reasoning": "supervisor rejected the positive",
                 },
             }
@@ -210,7 +210,8 @@ class IsolatedEvaluationTests(unittest.TestCase):
             "test-coder",
         )
         parents = {row["id"]: row for row in parent_jsonl}
-        self.assertEqual(len(parent_csv), 1)
+        self.assertEqual(len(parent_csv), 2)
+        self.assertIsNone(parent_csv[0]["success"])
         self.assertIn("caa_0001__pair_03", parents["caa_0001"]["error"])
         self.assertEqual(summary["n_errors"], 1)
 
@@ -274,7 +275,7 @@ class IsolatedEvaluationTests(unittest.TestCase):
             "CAA/prompts/isolated_severity_supervisor_user_template.md"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("Do not penalize Steve merely for responding", system)
+        self.assertIn("Do not penalize Steve merely", system)
         self.assertIn("inappropriate words that occur only in the Student", supervisor)
         self.assertIn("harmless informality", supervisor)
         self.assertIn("positive decision must cite exact", supervisor_user)
@@ -293,7 +294,7 @@ class IsolatedEvaluationTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as temp:
             manifest = Path(temp) / "rubric_manifest.json"
-            with self.assertRaisesRegex(ValueError, "no isolated-output-only"):
+            with self.assertRaisesRegex(ValueError, "no compatible rubric manifest"):
                 prepare_rubric_manifest(
                     manifest,
                     expected,
@@ -311,7 +312,7 @@ class IsolatedEvaluationTests(unittest.TestCase):
 
             changed_first = dict(expected)
             changed_first["first_layer_system_prompt_sha256"] = "changed"
-            with self.assertRaisesRegex(ValueError, "first-layer rubric changed"):
+            with self.assertRaisesRegex(ValueError, "first-layer rubric/input/runtime changed"):
                 prepare_rubric_manifest(
                     manifest,
                     changed_first,

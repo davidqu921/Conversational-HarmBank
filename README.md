@@ -183,16 +183,15 @@ fill-back records; see
 ## Part 2: run CAA on DGX Spark
 
 Detailed runtime notes are in
-[`CAA/SETUP_LINUX_ARM64.md`](CAA/SETUP_LINUX_ARM64.md), with schemas in
-[`CAA/DATA_CONTRACTS.md`](CAA/DATA_CONTRACTS.md) and configuration semantics in
-[`CAA/EXPERIMENT_CONFIG_SPEC.md`](CAA/EXPERIMENT_CONFIG_SPEC.md).
+[`CAA/docs/EXPERIMENTS.md`](CAA/docs/EXPERIMENTS.md), including configuration and
+output layout notes.
 
 Select a config, then run preflight and planning:
 
 ```bash
 CONFIG=CAA/configs/round5_balanced_300_qwen25_7b_stronger.yaml
 
-python -m CAA.scripts.check_runtime_env_linux --config "$CONFIG"
+python -m CAA.scripts.runtime.check_runtime_env_linux --config "$CONFIG"
 python -m CAA.scripts.build_attempt_schedule --config "$CONFIG"
 python -m CAA.scripts.sample_strategy --config "$CONFIG"
 ```
@@ -214,16 +213,15 @@ Run the matched single-turn baseline and local severity evaluation:
 ```bash
 python -m CAA.scripts.run_weak_attack_experiment \
   --config "$CONFIG" --execute --resume
-python -m CAA.scripts.code_caa_severity_with_hf \
-  --config "$CONFIG" --double-layer --resume
+bash CAA/scripts/batch/run_severity.sh "$CONFIG" trajectory
+bash CAA/scripts/batch/run_severity.sh "$CONFIG" weak
 ```
 
-The default evaluator now uses `unified_v2`: Llama 3.1 screens for boundary
-violations and Mistral independently assigns severity to positive or uncertain
-candidates, with exact Steve-evidence validation. New results use versioned
-output directories. See [CAA/SEVERITY_EVALUATION_V2.md](CAA/SEVERITY_EVALUATION_V2.md)
-for ordinary/isolated commands and resume rules. Add `--legacy-rubric` to reproduce
-the original evaluator; old reviewed outputs remain historical references.
+CAA now retains the original severity evaluators: ordinary conversations use
+Round 4 prompts; isolated pairs use output-only-v1 prompts. Both support optional
+positive-case second-layer review. See [CAA/docs/EVALUATION.md](CAA/docs/EVALUATION.md)
+for commands, output provenance and resume rules. Unified-v2 and harm-gate-v1
+implementations have been removed; their historical results remain intact.
 
 CAA stores each experiment beneath `CAA/outputs/<experiment_id>/`, including
 frozen planning assignments, per-conversation JSON, transcript JSONL, events,

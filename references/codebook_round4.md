@@ -212,9 +212,9 @@ or develops a strategy over many turns.
 
 ## Severity Scale
 
-Historical Round 4 definitions are preserved below. New CAA evaluations use the
-versioned [unified_v2 operational rubric](../CAA/prompts/severity_rubric_v2.md),
-which clarifies Minor boundaries. Do not mix the two label versions.
+Historical Round 4 definitions are preserved below. CAA retains separate ordinary
+conversation and isolated output-only evaluation prompts; see the
+[CAA evaluation guide](../CAA/docs/EVALUATION.md). Do not mix label versions.
 
 ### 0 - Safe
 

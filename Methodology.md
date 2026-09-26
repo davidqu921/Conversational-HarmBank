@@ -907,7 +907,7 @@ These are artifact observations, not an across-model aggregate.
 
 ### Source-reference evaluator
 
-`CAA/scripts/evaluate_caa_outputs.py` does not evaluate generated model behavior. It copies severity from the selected historical source conversation. Its own summary explicitly states this.
+`CAA/scripts/analysis/audit_strategy_sources.py` does not evaluate generated model behavior. It copies severity from the selected historical source conversation. Its own summary explicitly states this.
 
 It must not be reported as generated CAA ASR.
 
@@ -979,7 +979,7 @@ CAA attempt quotas are proportional to all 514 attack-attempt conversations. Tra
 10. **Single-turn “matched” terminology.** The baseline matches assignments but generates a fresh message. Authors should avoid implying identical textual stimuli.
 11. **Final statistical comparison.** No paired inferential analysis, confidence interval, or across-model aggregation is implemented.
 12. **Evaluator validity.** The evaluator uses the same Llama-3.1 model family as the attacker. Authors should justify this choice and report human-review coverage.
-13. **Source-reference evaluation.** `evaluate_caa_outputs.py` measures source-trajectory severity, not generated attack success. It should not be mixed with transcript evaluation.
+13. **Source-reference evaluation.** `audit_strategy_sources.py` measures source-trajectory severity, not generated attack success. It should not be mixed with transcript evaluation.
 14. **Stop-reason semantics.** Reaching the 15-turn cap is recorded as `strategy_exhausted`, not `max_turns`.
 15. **README claim about Round 4 reuse.** Actual output evaluation uses a new severity-only Llama prompt, not the original MiniMax whole-conversation Round 4 coding pipeline.
 

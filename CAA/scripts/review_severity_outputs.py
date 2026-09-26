@@ -68,6 +68,8 @@ def read_csv(
 
     seen: set[str] = set()
     for line_number, row in enumerate(rows, start=2):
+        if row.get("schema_version"):
+            raise ValueError(f"{path}: historical review synchronization does not support the v2 neutral/error schema")
         record_id = compact(row.get("id"))
         severity = compact(row.get("severity"))
         if recalculate_success:

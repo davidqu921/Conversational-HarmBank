@@ -534,7 +534,7 @@ def execute(config_path: Path, limit: int | None, resume: bool = False) -> None:
     if require_cuda and not torch.cuda.is_available():
         raise SystemExit(
             "CUDA is required for live execution but torch.cuda.is_available() is false. "
-            "Run CAA.scripts.check_runtime_env_linux before loading model weights."
+            "Run CAA.scripts.runtime.check_runtime_env_linux before loading model weights."
         )
     out_dir = config.output_dir
     planning_dir = out_dir / "planning"
