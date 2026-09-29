@@ -1,7 +1,7 @@
 # Conversational HarmBank
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This is the official repository for "[Conversational HarmBank: Human-Grounded Attack Trajectories for Interpretable Multi-Turn Red Teaming](https://arxiv.org/abs/2307.15043)" by XXXX
+This is the official repository for "[Conversational HarmBank: Human-Grounded Attack Trajectories for Interpretable Multi-Turn Red Teaming]" by Shizhuo Qu，Brian Harrington，Arina Azmi， Deepti Gorrepati and Omer Yilmaz.
 
 ## Introduction
 Conversational HarmBank is an end-to-end research pipeline for studying
