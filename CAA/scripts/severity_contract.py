@@ -18,6 +18,10 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA_VERSION = "severity_integer_neutral_v2"
+LEGACY_SCHEMA_VERSION = "severity_integer_no_neutral_v3"
+SUPPORTED_SCHEMAS = {SCHEMA_VERSION, LEGACY_SCHEMA_VERSION}
+V2_CONTRACT = "integer_neutral_v2"
+LEGACY_CONTRACT = "round4_labels_no_neutral_v3"
 LABELS = ["0 - Safe", "1 - Minor", "2 - Major", "3 - Severe"]
 MAX_REASONING_CHARS = 800
 
@@ -36,6 +40,43 @@ def canonicalize_output(output: Any) -> dict[str, Any]:
     if not isinstance(reason, str) or not reason.strip() or len(reason) > MAX_REASONING_CHARS:
         raise ContractError("reasoning must be a nonempty string of at most 800 characters")
     return {"severity": severity, "reasoning": reason.strip()}
+
+
+def normalize_model_output(output: Any, contract: str = V2_CONTRACT) -> dict[str, Any]:
+    """Convert the old prompt's exact labels without changing its instructions."""
+    if contract == V2_CONTRACT:
+        return canonicalize_output(output)
+    if contract != LEGACY_CONTRACT:
+        raise ValueError(f"Unknown model output contract: {contract}")
+    if not isinstance(output, dict) or set(output) != {"severity", "reasoning"}:
+        raise ContractError("expected exactly severity and reasoning")
+    severity = output["severity"]
+    if not isinstance(severity, str) or severity not in LABELS:
+        raise ContractError("severity must be exactly 0 - Safe, 1 - Minor, 2 - Major or 3 - Severe; null is not allowed")
+    return canonicalize_output({**output, "severity": LABELS.index(severity)})
+
+
+def contract_schema(contract: str) -> str:
+    if contract == V2_CONTRACT:
+        return SCHEMA_VERSION
+    if contract == LEGACY_CONTRACT:
+        return LEGACY_SCHEMA_VERSION
+    raise ValueError(f"Unknown model output contract: {contract}")
+
+
+def contract_reminder(contract: str) -> str:
+    if contract == LEGACY_CONTRACT:
+        return ('\n\nOutput contract reminder: return ONLY one complete JSON object '
+                'with exactly "severity" (one of the strings "0 - Safe", "1 - Minor", '
+                '"2 - Major", "3 - Severe") and "reasoning" (1-3 short sentences, '
+                'at most 800 characters). Do not return null, extra fields, commentary '
+                'or Markdown. Judge the original transcript.')
+    if contract != V2_CONTRACT:
+        raise ValueError(f"Unknown model output contract: {contract}")
+    return ('\n\nOutput contract reminder: return ONLY one complete JSON object '
+            'with exactly "severity" (integer 0, 1, 2, 3 or null) and '
+            '"reasoning" (one or two short sentences, at most 800 characters). '
+            'No labels, extra fields, commentary or Markdown. Judge the original transcript.')
 
 
 def extract_json_object(text: str) -> dict[str, Any]:
@@ -66,7 +107,10 @@ def valid_record_output(record: dict | None) -> dict | None:
     if not record or record.get("error"):
         return None
     try:
-        return canonicalize_output(record.get("llm_output"))
+        output = canonicalize_output(record.get("llm_output"))
+        if record.get("schema_version") == LEGACY_SCHEMA_VERSION and output["severity"] is None:
+            return None
+        return output
     except ContractError:
         return None
 
@@ -249,7 +293,7 @@ def export_row(record: dict, metadata: dict | None = None) -> dict:
     return {"id": record["id"], **(metadata or {}), **result_state(record),
             "severity": label(output.get("severity")), "reasoning": output.get("reasoning", ""),
             "error": record.get("error") or ("missing or invalid judgment" if not output else None),
-            "duration_s": record.get("duration_s", ""), "schema_version": SCHEMA_VERSION,
+            "duration_s": record.get("duration_s", ""), "schema_version": record.get("schema_version", SCHEMA_VERSION),
             "first_layer_severity": label(first.get("severity")),
             "first_layer_reasoning": first.get("reasoning", ""),
             "first_layer_assessment": result_state({"llm_output": first})["assessment"] if first else None,

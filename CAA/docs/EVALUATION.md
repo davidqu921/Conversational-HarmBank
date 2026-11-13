@@ -1,13 +1,21 @@
-# Severity Evaluation Guide — v2
+# Severity Evaluation Guide — preserved V2 and restored V3
 
-The ordinary conversation and isolated output evaluators now use the same strict
-integer/null output contract and independent two-layer workflow. Their evidence
-scopes remain different. This implementation replaces the previous runtime;
-historical outputs and human-reviewed labels remain unchanged.
+**Updated 2026-09-25:** all single-layer runs now use the user-restored Round 4
+system prompt. Existing dual-layer V2 remains available unchanged; new dual-layer
+V3 uses the restored prompt in both layers and does not accept semantic null.
+See [EVALUATOR_V3.md](EVALUATOR_V3.md) for the version matrix, exact contract,
+output directories and direct commands without shell variables.
+
+`--double-layer` alone retains V2 for backward compatibility. Add
+`--evaluator-version v3` to select the new two-stage route. The ordinary entry
+point now accepts `--condition trajectory|context-independent|weak` and chooses
+both input and output paths automatically.
 
 English is the main version. A short Chinese explanation is available at the end.
+The detailed null-aware workflow below describes **preserved dual-layer V2**;
+shared error handling and reporting also apply to restored mode.
 
-## Workflow
+## V2 workflow (preserved)
 
 ```mermaid
 flowchart TD
@@ -65,10 +73,11 @@ positive level. Neutral is not a substitute for execution failure.
 Both use Llama 3.1 8B Instruct first and Mistral 7B Instruct v0.3 for supervision
 by default. Direct Python entry points still support single-layer runs; add
 `--double-layer` for the workflow above. Batch launchers always enable it.
-`--legacy-rubric` is accepted only as a no-op spelling for older commands; it
-does not restore the old contract or prompts.
+`--legacy-rubric` is accepted only as a compatibility no-op. Single-layer runs
+now use the restored prompt automatically; dual-layer V3 requires
+`--evaluator-version v3`.
 
-Active prompts are `caa_severity_{system,user_template}.md` and
+Active **V2** prompts are `caa_severity_{system,user_template}.md` and
 `caa_severity_supervisor_{system,user_template}.md`, with the equivalent
 `isolated_severity_*` files for isolated evaluation. Revised boundaries distinguish
 Student-only language, category labels, clinical terminology, harmless compliance,
@@ -123,9 +132,17 @@ default is `context-independent`, whereas the ordinary Python entry point’s
 default input is trajectory. The launcher’s `all` option runs all three ordinary
 conditions **and isolated**, not just the three ordinary conditions.
 
-For a direct Python call on a non-default condition, specify **both**
-`--transcripts` and `--out-dir`. For example, after setting `EXPERIMENT_DIR` to
-the configuration’s resolved `output_dir`:
+Prefer `--condition` for a direct Python call; it selects both paths without
+shell variables. For example, the new V3 context-independent command is:
+
+```bash
+python -u -m CAA.scripts.code_caa_severity_with_hf \
+  --config CAA/configs/round5_balanced_100_gemma3_12b_stronger.yaml \
+  --condition context-independent --double-layer --evaluator-version v3 --resume
+```
+
+For custom inputs, explicitly provide **both** `--transcripts` and `--out-dir`.
+For example, after setting `EXPERIMENT_DIR` to the resolved experiment directory:
 
 ```bash
 python -m CAA.scripts.code_caa_severity_with_hf \
@@ -163,8 +180,9 @@ Default double-layer output names:
   with the same ordinary v2 subdirectory, when using `run_severity.sh`.
 - Isolated: `isolated_trajectory_seeded_repeated_weak_attack_evaluation/dual-layer_output-only-v2_llama31_and_mistral/`.
 
-Single-layer defaults are `human-aligned-v2_severity_llama31` and
-`output-only-v2_severity_llama31` respectively. Explicit model overrides are
+Restored single-layer defaults are `single-layer_round4-v3_llama31` within each
+condition's evaluation directory. Dual-layer V3 uses
+`dual-layer_round4-v3_llama31_and_mistral`; the V2 names above remain unchanged. Explicit model overrides are
 recorded in the manifest; directory names alone do not establish provenance.
 The all-model isolated launcher remains
 `CAA/scripts/batch/run_isolated_output_only_all.sh`; it runs the four models’
@@ -217,7 +235,8 @@ Neutral alone does not make a run fail. Check coverage as well as exit status.
 
 ## Outputs and denominators
 
-`schema_version` is `severity_integer_neutral_v2`. Final JSONL records expose
+V2 `schema_version` is `severity_integer_neutral_v2`; restored/V3 exports use
+`severity_integer_no_neutral_v3`. Final JSONL records expose
 numeric/null severity, boolean/null success, assessment and execution status.
 CSV retains canonical labels (`0 - Safe` through `3 - Severe`); ungraded
 severity/success are empty, with explicit state columns. Never interpret an
@@ -288,7 +307,13 @@ findings are recorded separately in
 <details>
 <summary>中文说明（点击展开）</summary>
 
-两套 evaluator 已切换到 v2。LLM 只输出 `severity: 0/1/2/3/null` 与简短
+2026-09-25 更新：所有 single-layer 已改用恢复的旧 Round 4 prompt；双层 V2
+保持可用，新增双层 V3，两层复用旧 prompt 且不接受语义 null。用
+`--double-layer --evaluator-version v3` 选择 V3。普通对话可直接使用
+`--condition trajectory|context-independent|weak`，无需设置实验目录变量。
+详见上方 V3 文档。以下 null 说明仅针对保留的双层 V2。
+
+双层 V2 中，LLM 只输出 `severity: 0/1/2/3/null` 与简短
 `reasoning`；其余验证、调度、重试、聚合、统计由 Python 完成。第一层 positive
 和 neutral 均进入 supervisor，supervisor 只看原始 transcript，不看第一层理由。
 复核仍为 null 是正常完成；复核失败则保留临时判断用于审计，不当成最终成功。

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run the human-aligned v2 dual-layer evaluators with condition-specific paths.
+# Run V2 or V3 dual-layer evaluators with condition-specific paths.
 set -Eeuo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}/../../.."
@@ -7,7 +7,7 @@ if [[ $# -lt 1 || "${1:-}" == --help || "${1:-}" == -h ]]; then
   cat <<'HELP'
 Usage: bash CAA/scripts/batch/run_severity.sh CONFIG [trajectory|context-independent|weak|isolated|all] [evaluator arguments]
 Default condition: context-independent. Every task uses --double-layer --resume.
-Ordinary conditions use human-aligned-v2; isolated uses output-only-v2.
+Default: preserved V2. Pass --evaluator-version v3 for restored Round 4 in both layers.
 Examples:
   bash CAA/scripts/batch/run_severity.sh CAA/configs/round5_balanced_100_gemma3_12b_stronger.yaml isolated
   bash CAA/scripts/batch/run_severity.sh CAA/configs/round5_balanced_100_gemma3_12b_stronger.yaml all --dry-run --limit 1
@@ -29,7 +29,7 @@ case "$condition" in
 esac
 for arg in "$@"; do
   case "$arg" in
-    --config|--config=*|--transcripts|--transcripts=*|--parent-index|--parent-index=*|--no-double-layer)
+    --config|--config=*|--transcripts|--transcripts=*|--parent-index|--parent-index=*|--condition|--condition=*|--no-double-layer)
       echo "This launcher owns condition selection and uses double-layer evaluation; use the Python entry point for $arg." >&2
       exit 2 ;;
   esac
@@ -42,20 +42,12 @@ for arg in "$@"; do
   fi
 done
 PYTHON_BIN="${PYTHON_BIN:-python}"
-experiment_dir="$("$PYTHON_BIN" -c 'import sys; from pathlib import Path; from CAA.scripts.caa_common import load_config; print(load_config(Path(sys.argv[1])).output_dir)' "$config")"
 for current in "${conditions[@]}"; do
-  case "$current" in
-    trajectory) input="$experiment_dir/transcripts.jsonl"; evaluation="$experiment_dir/evaluation" ;;
-    context-independent)
-      input="$experiment_dir/context_independent_trajectory_seeded_repeated_weak_attack_convos/transcripts.jsonl"
-      evaluation="$experiment_dir/context_independent_trajectory_seeded_repeated_weak_attack_evaluation" ;;
-    weak) input="$experiment_dir/weak_attack_convos/transcripts.jsonl"; evaluation="$experiment_dir/weak_attack_evaluation" ;;
-    isolated)
-      "$PYTHON_BIN" -u -m CAA.scripts.evaluate_isolated_repeated_attack --config "$config" --double-layer --resume "$@"
-      continue ;;
-  esac
-  "$PYTHON_BIN" -u -m CAA.scripts.code_caa_severity_with_hf \
-    --config "$config" --transcripts "$input" \
-    --out-dir "$evaluation/dual-layer_human-aligned-v2_llama31_and_mistral" \
-    --double-layer --resume "$@"
+  if [[ "$current" == isolated ]]; then
+    "$PYTHON_BIN" -u -m CAA.scripts.evaluate_isolated_repeated_attack \
+      --config "$config" --double-layer --resume "$@"
+  else
+    "$PYTHON_BIN" -u -m CAA.scripts.code_caa_severity_with_hf \
+      --config "$config" --condition "$current" --double-layer --resume "$@"
+  fi
 done

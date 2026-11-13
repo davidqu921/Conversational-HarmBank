@@ -17,7 +17,8 @@ Mistral, and Qwen. For each response model, the 100 configuration runs before
 the 300 configuration. Each task uses the isolated-output-only v2 prompts,
 Llama layer 1, Mistral layer 2, --double-layer, and --resume. The launcher stops
 if a Python process exits unsuccessfully; re-running the same command resumes
-completed pair codings.
+completed pair codings. Pass --evaluator-version v3 to use the restored Round 4
+system prompt in both stages and separate V3 output directories.
 
 Environment variables:
   PYTHON_BIN       Python executable (default: python)

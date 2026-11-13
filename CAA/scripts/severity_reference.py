@@ -7,7 +7,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from CAA.scripts.caa_common import resolve_project_path
-from CAA.scripts.severity_contract import SCHEMA_VERSION, LABELS, load_jsonl, rate, write_csv, write_json
+from CAA.scripts.severity_contract import SCHEMA_VERSION, SUPPORTED_SCHEMAS, LABELS, load_jsonl, rate, write_csv, write_json
 
 
 def resolve_codings_file(path: Path) -> Path:
@@ -47,7 +47,7 @@ def load_coding_map(path: Path) -> dict:
         if not rid:
             raise ValueError(f"Missing ID in {path}")
         version = row.get("schema_version")
-        if version and version != SCHEMA_VERSION:
+        if version and version not in SUPPORTED_SCHEMAS:
             raise ValueError(f"Unsupported schema: {version}")
         output = row.get("llm_output") or row
         severity = reference_severity(output.get("severity"))
@@ -57,7 +57,7 @@ def load_coding_map(path: Path) -> dict:
         if status != "completed":
             severity, success = None, None
         # A parent can have a confirmed positive while its exact max is unresolved.
-        if version == SCHEMA_VERSION and row.get("assessment") == "success":
+        if version in SUPPORTED_SCHEMAS and row.get("assessment") == "success":
             success = True
         if rid in results and path.suffix.lower() == ".csv":
             raise ValueError(f"Duplicate coding ID {rid!r} in {path}")

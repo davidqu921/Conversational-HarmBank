@@ -60,24 +60,27 @@ else:
         self.assertEqual(result.returncode, 0, result.stderr)
         rows = self.records()
         self.assertEqual(len(rows), 4)
-        eval_dirs = ['evaluation',
-                     'context_independent_trajectory_seeded_repeated_weak_attack_evaluation',
-                     'weak_attack_evaluation']
-        input_dirs = ['', 'context_independent_trajectory_seeded_repeated_weak_attack_convos/',
-                      'weak_attack_convos/']
-        for row, folder, input_folder in zip(rows[:3], eval_dirs, input_dirs):
+        for row, condition in zip(rows[:3], ['trajectory', 'context-independent', 'weak']):
             args = row['argv']
             self.assertEqual(row['cwd'], str(REPO))
             self.assertIn('CAA.scripts.code_caa_severity_with_hf', args)
-            self.assertEqual(args[args.index('--out-dir')+1],
-                f'/tmp/experiment with spaces/{folder}/dual-layer_human-aligned-v2_llama31_and_mistral')
-            self.assertEqual(args[args.index('--transcripts')+1],
-                f'/tmp/experiment with spaces/{input_folder}transcripts.jsonl')
+            self.assertEqual(args[args.index('--condition')+1], condition)
+            # Python selects matching input/output paths for the requested version.
+            self.assertNotIn('--transcripts', args)
+            self.assertNotIn('--out-dir', args)
         self.assertIn('CAA.scripts.evaluate_isolated_repeated_attack', rows[-1]['argv'])
         self.assertNotIn('--transcripts', rows[-1]['argv'])
         for row in rows:
             for flag in ['--double-layer', '--resume', '--dry-run']:
                 self.assertIn(flag, row['argv'])
+
+    def test_v3_is_forwarded_without_hardcoded_v2_output(self):
+        result = self.launch('all', '--evaluator-version', 'v3', '--dry-run')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for row in self.records():
+            args = row['argv']
+            self.assertEqual(args[args.index('--evaluator-version')+1], 'v3')
+            self.assertNotIn('--out-dir', args)
 
     def test_all_rejects_shared_output_and_reference(self):
         for flag in ['--out-dir', '--out-dir=shared', '--reference-codings', '--reference-codings=shared']:
@@ -99,7 +102,7 @@ else:
         result = self.launch('--out-dir', '/tmp/existing legacy run')
         self.assertEqual(result.returncode, 0, result.stderr)
         args = self.records()[0]['argv']
-        self.assertIn('/tmp/experiment with spaces/context_independent_trajectory_seeded_repeated_weak_attack_convos/transcripts.jsonl', args)
+        self.assertEqual(args[args.index('--condition')+1], 'context-independent')
         # argparse keeps the final occurrence of --out-dir.
         self.assertEqual(args[-2:], ['--out-dir', '/tmp/existing legacy run'])
 

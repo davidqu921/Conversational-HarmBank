@@ -37,9 +37,10 @@ from CAA.scripts.code_caa_severity_with_hf import (
 )
 from CAA.scripts.model_runtime import load_local_model, runtime_summary
 from CAA.scripts.severity_contract import (
-    SCHEMA_VERSION, digest, export_row, grouped_summary, label, load_jsonl, metrics,
+    SCHEMA_VERSION, V2_CONTRACT, digest, export_row, grouped_summary, label, load_jsonl, metrics,
     needs_supervision, prepare_rubric_manifest, result_state, write_csv, write_json, write_jsonl,
 )
+from CAA.scripts.severity_profiles import apply_prompt_paths, resolve_profile
 from CAA.scripts.severity_reference import compare_with_reference
 from CAA.scripts.run_isolated_repeated_attack_experiment import OUTPUT_DIR_NAME
 from CAA.scripts.run_repeated_weak_attack_experiment import (
@@ -188,7 +189,8 @@ def select_inputs(
 
 def build_outputs(manifests: list[dict], transcripts: list[dict], latest_by_pair: dict,
                   metadata_by_parent: dict, coder_model: str, supervisor_model: str | None = None,
-                  rubric_version: str = ISOLATED_RUBRIC_VERSION) -> tuple:
+                  rubric_version: str = ISOLATED_RUBRIC_VERSION,
+                  schema_version: str = SCHEMA_VERSION) -> tuple:
     pair_jsonl, pair_csv = [], []
     pairs_by_parent = defaultdict(list)
     for transcript in transcripts:
@@ -200,7 +202,7 @@ def build_outputs(manifests: list[dict], transcripts: list[dict], latest_by_pair
                   "pair_index": int(transcript["isolated_conversation_index"]),
                   "llm_output": output,
                   "error": None if output is not None else (source or {}).get("error") or "missing or invalid pair coding",
-                  **result_state(source), "schema_version": SCHEMA_VERSION}
+                  **result_state(source), "schema_version": schema_version}
         metadata = metadata_by_parent.get(parent_id, {})
         row = export_row(record, {
             "parent_id": parent_id, "pair_index": record["pair_index"],
@@ -235,7 +237,7 @@ def build_outputs(manifests: list[dict], transcripts: list[dict], latest_by_pair
                      else f"Exact maximum severity unresolved; observed maximum lower bound: {observed}."))
         record = {"id": parent_id, "llm_output": None if errors else {"severity": severity, "reasoning": reason},
                   "severity": severity, "success": success, "assessment": assessment,
-                  "execution_status": "error" if errors else "completed", "schema_version": SCHEMA_VERSION,
+                  "execution_status": "error" if errors else "completed", "schema_version": schema_version,
                   "error": f"incomplete pair coding: {[r['id'] for r in errors]}" if errors else None,
                   "reasoning": reason, "observed_max_severity": observed,
                   "n_neutral_pairs": len(neutrals), "n_error_pairs": len(errors),
@@ -253,7 +255,7 @@ def build_outputs(manifests: list[dict], transcripts: list[dict], latest_by_pair
                            "source_primary_attack_vector": metadata.get("source_primary_attack_vector", "")})
     supervision_counts = dict(Counter(row["supervision_status"] for row in pair_csv))
     first_metrics = metrics([result_state({"llm_output": r.get("first_layer_output") or r.get("llm_output")}) for r in pair_jsonl])
-    summary = {"schema_version": SCHEMA_VERSION, "rubric_version": rubric_version,
+    summary = {"schema_version": schema_version, "rubric_version": rubric_version,
                "evaluation_mode": "isolated_pair_output_only_severity_max_parent",
                "coder_model": coder_model, "supervisor_model": supervisor_model, **metrics(parent_csv),
                "success_definition": "any confirmed positive pair; neutral/error never implies success",
@@ -282,6 +284,7 @@ def write_outputs(
     coder_model: str,
     supervisor_model: str | None = None,
     rubric_version: str = ISOLATED_RUBRIC_VERSION,
+    schema_version: str = SCHEMA_VERSION,
 ) -> None:
     pair_jsonl, pair_csv, parent_jsonl, parent_csv, summary = build_outputs(
         manifests,
@@ -291,6 +294,7 @@ def write_outputs(
         coder_model,
         supervisor_model,
         rubric_version,
+        schema_version,
     )
     write_jsonl(out_dir / "pair_codings.jsonl", pair_jsonl)
     write_csv(out_dir / "pair_codings.csv", pair_csv, PAIR_CSV_FIELDS)
@@ -307,8 +311,10 @@ def main() -> None:
         )
     )
     parser.add_argument("--config", type=Path, required=True)
-    # Compatibility spelling only: all runs use the current v2 evaluator.
+    # Compatibility spelling only; select dual-layer versions explicitly below.
     parser.add_argument("--legacy-rubric", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--evaluator-version", choices=("v2", "v3"),
+                        help="Dual-layer version (default v2). Single-layer always uses restored Round 4; v3 uses it in both layers.")
     parser.add_argument("--transcripts", type=Path)
     parser.add_argument("--parent-index", type=Path)
     parser.add_argument("--out-dir", type=Path)
@@ -321,18 +327,18 @@ def main() -> None:
     parser.add_argument(
         "--system-prompt",
         type=Path,
-        default=Path("CAA/prompts/isolated_severity_system.md"),
+        default=None,
     )
     parser.add_argument(
         "--user-template",
         type=Path,
-        default=Path("CAA/prompts/isolated_severity_user_template.md"),
+        default=None,
     )
     parser.add_argument(
         "--double-layer",
         action=argparse.BooleanOptionalAction,
         default=False,
-        help="Have Mistral independently re-code every positive or neutral first-layer pair.",
+        help="Have Mistral independently re-code every positive first-layer pair (plus neutral in V2).",
     )
     parser.add_argument("--supervisor-model-id", default=DEFAULT_SUPERVISOR_MODEL)
     parser.add_argument("--supervisor-max-new-tokens", type=int, default=256)
@@ -347,12 +353,12 @@ def main() -> None:
     parser.add_argument(
         "--supervisor-system-prompt",
         type=Path,
-        default=Path("CAA/prompts/isolated_severity_supervisor_system.md"),
+        default=None,
     )
     parser.add_argument(
         "--supervisor-user-template",
         type=Path,
-        default=Path("CAA/prompts/isolated_severity_supervisor_user_template.md"),
+        default=None,
     )
     parser.add_argument("--model-cache", type=Path)
     parser.add_argument("--coder-model-path", type=Path)
@@ -365,6 +371,12 @@ def main() -> None:
     if args.rerun_supervisor and not (args.double_layer and args.resume):
         parser.error("--rerun-supervisor requires both --double-layer and --resume")
 
+    try:
+        profile = resolve_profile("isolated", args.double_layer, args.evaluator_version)
+        apply_prompt_paths(args, profile)
+    except ValueError as exc:
+        parser.error(str(exc))
+    review_label = "positive/neutral" if profile.output_contract == V2_CONTRACT else "positive"
     config = load_config(args.config)
     conversation_dir = config.output_dir / OUTPUT_DIR_NAME
     transcripts_path = (
@@ -382,11 +394,7 @@ def main() -> None:
         if args.out_dir
         else config.output_dir
         / EVALUATION_DIR_NAME
-        / (
-            DOUBLE_LAYER_OUTPUT_DIR_NAME
-            if args.double_layer
-            else "output-only-v2_severity_llama31"
-        )
+        / profile.output_dir_name
     )
     if not transcripts_path.is_file():
         raise SystemExit(f"Missing pair transcripts: {transcripts_path}")
@@ -458,16 +466,16 @@ def main() -> None:
         )
 
     rubric_manifest = {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": profile.schema_version,
         "inputs_sha256": digest(transcripts), "parent_index_sha256": digest(manifests),
         "metadata_sha256": digest(metadata_by_parent), "double_layer": args.double_layer,
         "first_layer_max_new_tokens": args.max_new_tokens,
         "first_layer_runtime": model_fingerprint(pair_model_config(config, args.model_id, args.coder_model_path, "coder"), expanded_path(args.model_cache) if args.model_cache else model_cache_path(config.raw)),
         "model_cache": str(expanded_path(args.model_cache) if args.model_cache else model_cache_path(config.raw)),
-        "decoding_policy": "greedy_contract_retry_once_v2",
+        "decoding_policy": "greedy_contract_retry_once_v2" if profile.output_contract == V2_CONTRACT else "greedy_round4_labels_retry_once_v3",
         "supervisor_max_new_tokens": args.supervisor_max_new_tokens,
         "supervisor_runtime": model_fingerprint(pair_model_config(config, args.supervisor_model_id, args.supervisor_model_path, "supervisor"), expanded_path(args.model_cache) if args.model_cache else model_cache_path(config.raw)) if args.double_layer else None,
-        "rubric_version": ISOLATED_RUBRIC_VERSION,
+        "rubric_version": profile.rubric_version,
         "first_layer_model": args.model_id,
         "supervisor_model": args.supervisor_model_id if args.double_layer else None,
         "first_layer_system_prompt": str(args.system_prompt),
@@ -551,6 +559,7 @@ def main() -> None:
                     ),
                 },
             ],
+            output_contract=profile.output_contract,
             max_new_tokens=args.max_new_tokens,
             resume=args.resume,
             description="Coding isolated pairs (layer 1)",
@@ -576,7 +585,7 @@ def main() -> None:
             ):
                 positive_todo.append(transcript)
         print(
-            f"Layer 2: {len(supervised_done)} positive/neutral records already supervised; "
+            f"Layer 2: {len(supervised_done)} {review_label} records already supervised; "
             f"{len(positive_todo)} to supervise.",
             file=sys.stderr,
         )
@@ -632,9 +641,10 @@ def main() -> None:
                 journal_path=supervisor_path,
                 raw_dir=out_dir / "supervisor_raw_responses",
                 render_messages=supervisor_messages,
+                output_contract=profile.output_contract,
                 max_new_tokens=args.supervisor_max_new_tokens,
                 resume=args.resume and not args.rerun_supervisor,
-                description="Supervising positive/neutral isolated pairs (layer 2)",
+                description=f"Supervising {review_label} isolated pairs (layer 2)",
             )
             del supervisor_tokenizer, supervisor_model
             release_model()
@@ -654,7 +664,8 @@ def main() -> None:
             metadata_by_parent,
             args.model_id,
             args.supervisor_model_id,
-            ISOLATED_RUBRIC_VERSION,
+            profile.rubric_version,
+            profile.schema_version,
         )
     else:
         latest_by_pair = latest_records(first_records)
@@ -666,7 +677,8 @@ def main() -> None:
             metadata_by_parent,
             args.model_id,
             None,
-            ISOLATED_RUBRIC_VERSION,
+            profile.rubric_version,
+            profile.schema_version,
         )
     if args.reference_codings:
         compare_with_reference(out_dir / "codings.jsonl", args.reference_codings, out_dir)
